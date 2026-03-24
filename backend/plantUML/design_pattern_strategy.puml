@@ -1,0 +1,33 @@
+@startuml
+package "Strategy Pattern (Lõi Thực thi Điều khiển)" {
+    class IrrigationContext {
+        - strategy: IrrigationStrategy
+        + setStrategy(strategy: IrrigationStrategy)
+        + executeControl(farmId: UUID, deviceId: UUID, command: String): Boolean
+    }
+
+    interface IrrigationStrategy <<Interface>> {
+        + executeControl(farmId: UUID, deviceId: UUID, command: String): Boolean
+    }
+
+    class ManualStrategy {
+        + executeControl(farmId: UUID, deviceId: UUID, command: String): Boolean
+        - validateModeIsManual(): Boolean
+    }
+
+    class ScheduledStrategy {
+        + executeControl(farmId: UUID, deviceId: UUID, command: String): Boolean
+        - validateModeIsAuto(): Boolean
+    }
+
+    class AutoThresholdStrategy {
+        + executeControl(farmId: UUID, deviceId: UUID, command: String): Boolean
+        - validateModeIsAuto(): Boolean
+    }
+
+    IrrigationContext o--> "1" IrrigationStrategy : Uses
+    IrrigationStrategy <|.. ManualStrategy
+    IrrigationStrategy <|.. ScheduledStrategy
+    IrrigationStrategy <|.. AutoThresholdStrategy
+}
+@enduml

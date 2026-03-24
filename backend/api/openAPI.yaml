@@ -1,0 +1,1602 @@
+openapi: 3.0.3
+info:
+  title: YoloFarm API - Đồ án Thực tập Đa ngành (CO3109)
+  description: |
+    Tài liệu đặc tả API cho hệ thống Nông nghiệp thông minh YoloFarm.
+    
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Local Spring Boot Server
+tags:
+  - name: Auth
+    description: Xác thực và Quản lý tài khoản
+  - name: Farms
+    description: Quản lý Nông trại (Logical container)
+  - name: Device Models
+    description: Danh mục thiết bị
+  - name: Devices
+    description: Quản lý và Cấp phát thiết bị ngoại vi
+  - name: Rules
+    description: Hệ thống Rule Engine tự động hóa
+  - name: Telemetry
+    description: Truy xuất dữ liệu chuỗi thời gian (Biểu đồ)
+  - name: Control
+    description: Điều khiển thiết bị thủ công qua MQTT
+  - name: AI Analysis
+    description: Trí tuệ nhân tạo (Nhận diện lá, phân loại trái)
+  - name: Notifications
+    description: Thông báo hệ thống
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ==========================================
+  # 1. AUTHENTICATION (XÁC THỰC)
+  # ==========================================
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Đăng ký tài khoản Nông dân
+      security: [] 
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              KichBanChuan:
+                summary: Đầy đủ thông tin hợp lệ
+                value:
+                  username: nongdan_01
+                  password: SecurePassword123!
+                  email: nongdan01@gmail.com
+              KichBanThieuEmail:
+                summary: Cố tình không nhập Email
+                value:
+                  username: nongdan_01
+                  password: SecurePassword123!
+      responses:
+        '201':
+          description: Đăng ký thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user_id:
+                    type: string
+                    format: uuid
+              examples:
+                ThanhCong:
+                  summary: Trả về ID của user mới
+                  value:
+                    message: "Đăng ký tài khoản thành công!"
+                    user_id: "123e4567-e89b-12d3-a456-426614174000"
+        '400':
+          description: Dữ liệu đầu vào không hợp lệ (Bad Request)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                LoiMatKhau:
+                  summary: Lỗi mật khẩu quá yếu
+                  value:
+                    code: 400
+                    message: Validation Failed
+                    details: "Mật khẩu phải chứa ít nhất 8 ký tự, bao gồm chữ và số."
+                LoiThieuTruong:
+                  summary: Lỗi bỏ trống trường bắt buộc
+                  value:
+                    code: 400
+                    message: Validation Failed
+                    details: "Trường 'email' không được để trống."
+        '409':
+          description: Xung đột dữ liệu (Conflict)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                LoiTrungUsername:
+                  summary: Tên đăng nhập đã tồn tại
+                  value:
+                    code: 409
+                    message: Conflict
+                    details: "Tên đăng nhập 'nongdan_01' đã được sử dụng."
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Đăng nhập hệ thống
+      security: [] 
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              DangNhapChuan:
+                summary: Nhập đúng tài khoản mật khẩu
+                value:
+                  username: nongdan_01
+                  password: SecurePassword123!
+      responses:
+        '200':
+          description: Đăng nhập thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              examples:
+                DangNhapThanhCong:
+                  summary: Trả về JWT Token
+                  value:
+                    access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOi..."
+                    token_type: "Bearer"
+                    expires_in: 86400
+                    role: "FARMER"
+        '401':
+          description: Sai tên đăng nhập hoặc mật khẩu (Unauthorized)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                SaiMatKhau:
+                  summary: Nhập sai mật khẩu
+                  value:
+                    code: 401
+                    message: Unauthorized
+                    details: "Tài khoản hoặc mật khẩu không chính xác."
+
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      summary: Lấy thông tin cá nhân hiện tại
+      responses:
+        '200':
+          description: Chi tiết Profile người dùng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+              examples:
+                ProfileNongDan:
+                  summary: Profile của Nông Dân
+                  value:
+                    id: "123e4567-e89b-12d3-a456-426614174000"
+                    username: "nongdan_01"
+                    email: "nongdan01@gmail.com"
+                    role: "FARMER"
+                    created_at: "2023-10-01T12:00:00Z"
+                ProfileAdmin:
+                  summary: Profile của Admin
+                  value:
+                    id: "999e4567-e89b-12d3-a456-426614179999"
+                    username: "admin_tong"
+                    email: "admin@yolofarm.com"
+                    role: "ADMIN"
+                    created_at: "2023-01-01T08:00:00Z"
+        '401':
+          description: Token không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                TokenHetHan:
+                  summary: Token đã hết hạn
+                  value:
+                    code: 401
+                    message: Unauthorized
+                    details: "JWT Token đã hết hạn. Vui lòng đăng nhập lại."
+
+  # ==========================================
+  # 2. FARMS (NÔNG TRẠI)
+  # ==========================================
+  /api/v1/farms:
+    get:
+      tags: [Farms]
+      summary: Lấy danh sách Nông trại
+      responses:
+        '200':
+          description: Lấy danh sách thành công
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FarmResponse'
+              examples:
+                CoDuLieu:
+                  summary: Nông dân có 2 nông trại
+                  value:
+                    - id: "888e4567-e89b-12d3-a456-426614175555"
+                      owner_id: "123e4567-e89b-12d3-a456-426614174000"
+                      name: "Vườn Cà Chua Thủy Canh"
+                      location: "Khu A"
+                      created_at: "2023-10-02T08:30:00Z"
+                    - id: "777e4567-e89b-12d3-a456-426614175555"
+                      owner_id: "123e4567-e89b-12d3-a456-426614174000"
+                      name: "Vườn Dưa Lưới"
+                      location: "Khu B"
+                      created_at: "2023-10-05T09:00:00Z"
+                Trong:
+                  summary: Nông dân chưa có nông trại nào
+                  value: []
+        '401':
+          description: Lỗi xác thực
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ThieuToken:
+                  summary: Không gửi header Authorization
+                  value:
+                    code: 401
+                    message: Unauthorized
+                    details: "Missing Authorization header."
+
+    post:
+      tags: [Farms]
+      summary: Tạo Nông trại mới (Dành cho FARMER)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FarmCreateRequest'
+            examples:
+              TaoMoi:
+                summary: Nhập tên và vị trí vườn
+                value:
+                  name: "Vườn Cà Chua Thủy Canh"
+                  location: "Khu nhà màng A"
+      responses:
+        '201':
+          description: Tạo Nông trại thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FarmResponse'
+              examples:
+                ThanhCong:
+                  summary: Trả về Object Farm vừa tạo
+                  value:
+                    id: "888e4567-e89b-12d3-a456-426614175555"
+                    owner_id: "123e4567-e89b-12d3-a456-426614174000"
+                    name: "Vườn Cà Chua Thủy Canh"
+                    location: "Khu nhà màng A"
+                    created_at: "2023-10-02T08:30:00Z"
+        '400':
+          description: Thiếu thông tin bắt buộc
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                LoiThieuTen:
+                  summary: Không nhập tên nông trại
+                  value:
+                    code: 400
+                    message: Validation Failed
+                    details: "Tên nông trại (name) không được để trống."
+        '401':
+          description: Chưa mang theo JWT Token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ThieuToken:
+                  summary: Không gửi header Authorization
+                  value:
+                    code: 401
+                    message: Unauthorized
+                    details: "Missing Authorization header."
+  
+  /api/v1/device-models:
+    get:
+      tags: [Device Models]
+      summary: (FARMER/ADMIN) Lấy danh sách khuôn mẫu thiết bị hiện có
+      responses:
+        '200':
+          description: Danh sách Device Models
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeviceModelResponse'
+              examples:
+                ThanhCong:
+                  summary: Danh sách thiết bị Admin đã nhập kho
+                  value:
+                    - id: "m11e4567-e89b-12d3-a456-426614171111"
+                      model_name: "Cảm biến độ ẩm đất v1"
+                      device_type: "SENSOR"
+                      metric_type: "SOIL_MOISTURE"
+                      manufacturer: "AgriTech VN"
+
+  /api/v1/admin/device-models:
+    post:
+      tags: [Device Models]
+      summary: (ADMIN) Khai báo một loại thiết bị mới vào hệ thống
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceModelRequest'
+            examples:
+              ThemMoi:
+                summary: Thêm mẫu máy bơm mới
+                value:
+                  model_name: "Máy bơm chìm 220V 5W"
+                  device_type: "ACTUATOR"
+                  metric_type: "PUMP"
+                  manufacturer: "Panasonic"
+      responses:
+        '201':
+          description: Tạo thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceModelResponse'
+
+  /api/v1/farms/{farmId}:
+    get:
+      tags: [Farms]
+      summary: Lấy thông tin chi tiết một Nông trại
+      parameters:
+        - name: farmId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Chi tiết Farm
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FarmResponse'
+    put:
+      tags: [Farms]
+      summary: Cập nhật thông tin Nông trại
+      parameters:
+        - name: farmId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                location:
+                  type: string
+            examples:
+              SuaThongTin:
+                summary: Cập nhật tên và vị trí
+                value:
+                  name: "Vườn Cà Chua (Đã mở rộng)"
+                  location: "Khu nhà màng A và B"
+      responses:
+        '200':
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FarmResponse'
+    delete:
+      tags: [Farms]
+      summary: Xóa một Nông trại
+      description: |
+        Xóa vĩnh viễn hoặc đánh dấu xóa một nông trại. 
+        Lưu ý: Hệ thống sẽ chặn hành động này nếu nông trại vẫn còn thiết bị (Devices) hoặc các kịch bản tự động (Rules) đang gán vào.
+      parameters:
+        - name: farmId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Xóa nông trại thành công (No Content).
+        '401':
+          description: Chưa đăng nhập.
+          content:
+            application/json:
+              example:
+                code: 401
+                message: "Unauthorized: Vui lòng đăng nhập để thực hiện."
+        '403':
+          description: Lỗi phân quyền (Forbidden).
+          content:
+            application/json:
+              example:
+                code: 403
+                message: "Bạn không phải chủ sở hữu (Owner) nên không có quyền xóa nông trại này."
+        '404':
+          description: Không tìm thấy (Not Found).
+          content:
+            application/json:
+              example:
+                code: 404
+                message: "Nông trại không tồn tại hoặc đã bị xóa."
+        '409':
+          description: Xung đột ràng buộc dữ liệu (Conflict).
+          content:
+            application/json:
+              examples:
+                ConThietBi:
+                  summary: Lỗi còn thiết bị
+                  value:
+                    code: 409
+                    message: "Không thể xóa: Nông trại hiện vẫn còn 05 thiết bị đang liên kết."
+                ConRules:
+                  summary: Lỗi còn kịch bản tự động
+                  value:
+                    code: 409
+                    message: "Vui lòng xóa các Rules (Tự động hóa) trước khi xóa Nông trại."
+      
+
+  /api/v1/farms/{farmId}/devices:
+    get:
+      tags: [Devices]
+      summary: (FARMER) Xem danh sách thiết bị trong một nông trại
+      parameters:
+        - name: farmId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Danh sách thiết bị kèm trạng thái kết nối
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeviceResponse'
+              examples:
+                DanhSach:
+                  summary: Có thiết bị đang mất kết nối
+                  value:
+                    - id: "d11e4567-e89b-12d3-a456-426614171111"
+                      model_id: "m11e4567-e89b-12d3-a456-426614171111"
+                      name: "Cảm biến đất khu A"
+                      status: "ACTIVE"
+                      connection_status: "ONLINE"
+                      last_seen: "2023-10-02T10:05:00Z"
+                      operating_mode: "AUTO"
+                    - id: "d22e4567-e89b-12d3-a456-426614172222"
+                      model_id: "m22e4567-e89b-12d3-a456-426614172222"
+                      name: "Máy bơm số 1"
+                      status: "ACTIVE"
+                      connection_status: "OFFLINE"
+                      last_seen: "2023-10-01T08:00:00Z"
+                      operating_mode: "MANUAL"
+  /api/v1/devices/{deviceId}:
+    patch:
+      tags: [Devices]
+      summary: (FARMER) Đổi tên hiển thị của Thiết bị
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+            examples:
+              DoiTen:
+                summary: Đổi tên thiết bị cho dễ nhớ
+                value:
+                  name: "Bơm tưới giàn Lan"
+      responses:
+        '200':
+          description: Cập nhật tên thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceResponse'
+
+  /api/v1/devices/{deviceId}/remove-requests:
+    post:
+      tags: [Devices]
+      summary: (FARMER) Gửi yêu cầu gỡ bỏ/trả lại thiết bị
+      description: API này sẽ đổi status của thiết bị thành PENDING_REMOVAL.
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Gửi yêu cầu thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                YeuCauXoa:
+                  summary: Đã báo cho Admin
+                  value:
+                    message: "Đã gửi yêu cầu gỡ bỏ thiết bị. Vui lòng chờ Admin xác nhận thu hồi."
+
+  /api/v1/admin/devices/{deviceId}:
+    delete:
+      tags: [Devices]
+      summary: (ADMIN) Xóa hoàn toàn thiết bị & Thu hồi Feed Key
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Đã xóa thiết bị và giải phóng Feed Key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                XoaThanhCong:
+                  summary: Hoàn tất thu hồi
+                  value:
+                    message: "Đã thu hồi Feed Key và xóa thiết bị khỏi hệ thống."
+
+  /api/v1/devices/requests:
+    post:
+      tags: [Devices]
+      summary: (FARMER) Yêu cầu thêm thiết bị mới
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRequest'
+            examples:
+              YeuCauTuModel:
+                summary: Chọn Model Máy Bơm từ Dropdown
+                value:
+                  farm_id: "888e4567-e89b-12d3-a456-426614175555"
+                  model_id: "m11e4567-e89b-12d3-a456-426614171111"
+                  name: "Máy bơm nước hồ 1"
+      responses:
+        '201':
+          description: Đã gửi yêu cầu thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceResponse'
+              examples:
+                ThanhCong:
+                  summary: Trạng thái PENDING
+                  value:
+                    id: "d11e4567-e89b-12d3-a456-426614171111"
+                    farm_id: "888e4567-e89b-12d3-a456-426614175555"
+                    model_id: "m11e4567-e89b-12d3-a456-426614171111"
+                    name: "Máy bơm nước hồ 1"
+                    status: "PENDING"
+                    connection_status: "OFFLINE"
+                    operating_mode: "MANUAL"
+        '403':
+          description: Không có quyền thao tác trên Nông trại này
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                LoiQuyen:
+                  summary: Nông dân điền farm_id của người khác
+                  value:
+                    code: 403
+                    message: Forbidden
+                    details: "Bạn không có quyền thêm thiết bị vào nông trại này."
+
+  /api/v1/admin/devices/requests:
+    get:
+      tags: [Devices]
+      summary: (ADMIN) Xem danh sách thiết bị chờ duyệt
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+          examples:
+            LocChoDuyet:
+              summary: Lọc các đơn PENDING
+              value: "PENDING"
+      responses:
+        '200':
+          description: Danh sách đơn yêu cầu
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeviceResponse'
+              examples:
+                DanhSachCho:
+                  summary: Có 1 thiết bị đang chờ duyệt
+                  value:
+                    - id: "d11e4567-e89b-12d3-a456-426614171111"
+                      farm_id: "888e4567-e89b-12d3-a456-426614175555"
+                      name: "Máy bơm nước hồ 1"
+                      device_type: "ACTUATOR"
+                      status: "PENDING"
+                      adafruit_feed_key: null
+        '403':
+          description: Chỉ Admin mới được gọi API này
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                KhongPhaiAdmin:
+                  summary: Role FARMER cố tình gọi API Admin
+                  value:
+                    code: 403
+                    message: Forbidden
+                    details: "Access Denied. Cần quyền ADMIN."
+
+  /api/v1/admin/devices/{deviceId}/approve:
+    post:
+      tags: [Devices]
+      summary: (ADMIN) Duyệt và cấp Feed Key cho thiết bị
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                adafruit_feed_key:
+                  type: string
+            examples:
+              NhapFeedKey:
+                summary: Nhập Feed Key chuẩn từ Adafruit
+                value:
+                  adafruit_feed_key: "yolofarm/feeds/pump-01"
+      responses:
+        '200':
+          description: Cấp phát thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceResponse'
+              examples:
+                DuyetThanhCong:
+                  summary: Trạng thái đổi thành ACTIVE
+                  value:
+                    id: "d11e4567-e89b-12d3-a456-426614171111"
+                    status: "ACTIVE"
+                    adafruit_feed_key: "yolofarm/feeds/pump-01"
+        '404':
+          description: Không tìm thấy thiết bị
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                SaiId:
+                  summary: Device ID không tồn tại
+                  value:
+                    code: 404
+                    message: Not Found
+                    details: "Không tìm thấy thiết bị với ID này."
+
+  /api/v1/admin/devices/{deviceId}/reject:
+    post:
+      tags: [Devices]
+      summary: (ADMIN) Từ chối cấp phát thiết bị
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reject_reason:
+                  type: string
+            examples:
+              TuChoi:
+                summary: Nhập lý do từ chối
+                value:
+                  reject_reason: "Vượt quá số lượng thiết bị của gói cước hiện tại."
+      responses:
+        '200':
+          description: Đã từ chối và gửi thông báo
+          content:
+            application/json:
+              example:
+                message: "Đã từ chối yêu cầu và gửi thông báo cho Nông dân."
+
+  # ==========================================
+  # 4. RULES (TỰ ĐỘNG HÓA / RULE ENGINE)
+  # ==========================================
+  /api/v1/farms/{farmId}/rules:
+    get:
+      tags: [Rules]
+      summary: (FARMER) Lấy danh sách các Luật tự động hóa của Nông trại
+      parameters:
+        - name: farmId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Danh sách Rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RuleResponse'
+
+  /api/v1/rules:
+    post:
+      tags: [Rules]
+      summary: Tạo mới Luật Tự động hóa (Dành cho FARMER)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RuleCreateRequest'
+            examples:
+              TuoiTuDong:
+                summary: Luật tưới cây khi đất khô
+                value:
+                  farm_id: "888e4567-e89b-12d3-a456-426614175555"
+                  rule_name: "Tưới tự động khi đất khô"
+                  trigger_device_id: "cam-bien-do-am-id"
+                  operator: "<"
+                  threshold_value: 40.5
+                  action_device_id: "may-bom-id"
+                  action_command: "ON"
+      responses:
+        '201':
+          description: Đã tạo Rule thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleResponse'
+              examples:
+                ThanhCong:
+                  summary: Object Rule được sinh ra
+                  value:
+                    id: "r11e4567-e89b-12d3-a456-426614171111"
+                    rule_name: "Tưới tự động khi đất khô"
+                    is_active: true
+        '400':
+          description: Lỗi logic khi thiết lập luật
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                LoiThietBi:
+                  summary: Chọn sai loại thiết bị Action
+                  value:
+                    code: 400
+                    message: Validation Failed
+                    details: "Thiết bị thực thi (action_device_id) bắt buộc phải là loại ACTUATOR."
+  
+  
+
+  /api/v1/rules/{ruleId}/toggle:
+    patch:
+      tags: [Rules]
+      summary: Bật/Tắt (Enable/Disable) một Rule
+      parameters:
+        - name: ruleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_active:
+                  type: boolean
+            examples:
+              TatLuat:
+                summary: Tắt luật tưới cây
+                value:
+                  is_active: false
+      responses:
+        '200':
+          description: Đã cập nhật trạng thái
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                ThanhCong:
+                  summary: Phản hồi thành công
+                  value:
+                    message: "Đã tắt Rule thành công."
+
+  /api/v1/rules/{ruleId}:
+    delete:
+      tags: [Rules]
+      summary: Xóa một Rule
+      parameters:
+        - name: ruleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Xóa thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                XoaThanhCong:
+                  summary: Phản hồi xóa
+                  value:
+                    message: "Đã xóa Rule thành công."
+
+    put:
+      tags: [Rules]
+      summary: (FARMER) Cập nhật cấu hình Luật Tự động hóa
+      parameters:
+        - name: ruleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RuleCreateRequest'
+            examples:
+              CapNhatNguong:
+                summary: Thay đổi ngưỡng độ ẩm từ 40% lên 50%
+                value:
+                  farm_id: "888e4567-e89b-12d3-a456-426614175555"
+                  rule_name: "Tưới tự động khi đất khô (Đã sửa)"
+                  trigger_device_id: "cam-bien-do-am-id"
+                  operator: "<"
+                  threshold_value: 50.0
+                  action_device_id: "may-bom-id"
+                  action_command: "ON"
+      responses:
+        '200':
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleResponse'
+
+  # ==========================================
+  # 5. TELEMETRY (DỮ LIỆU VẼ BIỂU ĐỒ)
+  # ==========================================
+  /api/v1/devices/{deviceId}/telemetry:
+    get:
+      tags: [Telemetry]
+      summary: Lấy lịch sử dữ liệu của một Cảm biến
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: start_time
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: aggregate
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [15m, 1h, 1d]
+          description: "Gom nhóm dữ liệu (VD: trung bình mỗi giờ) để tránh quá tải trình duyệt"
+      responses:
+        '200':
+          description: Trả về mảng dữ liệu thời gian thực
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TelemetryDataPoint'
+              examples:
+                DuLieuNhietDo:
+                  summary: Biểu đồ Nhiệt độ theo giờ
+                  value:
+                    - time: "2023-10-01T08:00:00Z"
+                      value: 32.5
+                    - time: "2023-10-01T09:00:00Z"
+                      value: 34.1
+                KhongCoDuLieu:
+                  summary: Cảm biến bị mất kết nối
+                  value: []
+        '400':
+          description: Lỗi tham số thời gian
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                LoiThoiGian:
+                  summary: start_time lớn hơn end_time
+                  value:
+                    code: 400
+                    message: Bad Request
+                    details: "Thời gian bắt đầu (start_time) không thể lớn hơn thời gian kết thúc (end_time)."
+
+  # ==========================================
+  # 6. CONTROL (ĐIỀU KHIỂN THỦ CÔNG)
+  # ==========================================
+  /api/v1/devices/{deviceId}/command:
+    post:
+      tags: [Control]
+      summary: Gửi lệnh điều khiển xuống Thiết bị thực thi (Actuator)
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                command:
+                  type: string
+                  enum: [ON, OFF]
+            examples:
+              LenhBat:
+                summary: Bật máy bơm
+                value:
+                  command: "ON"
+              LenhTat:
+                summary: Tắt máy bơm
+                value:
+                  command: "OFF"
+      responses:
+        '200':
+          description: Đã gửi lệnh xuống MQTT Broker
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                ThanhCong:
+                  summary: Phản hồi thành công
+                  value:
+                    message: "Lệnh [ON] đã được gửi tới thiết bị thành công."
+        '400':
+          description: Lỗi logic thiết bị
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                LoiSaiLoaiThietBi:
+                  summary: Cố tình gửi lệnh cho Cảm biến
+                  value:
+                    code: 400
+                    message: Bad Request
+                    details: "Không thể gửi lệnh điều khiển. Thiết bị này là SENSOR, không phải ACTUATOR."
+                LoiChuaActive:
+                  summary: Thiết bị chưa được Admin duyệt
+                  value:
+                    code: 400
+                    message: Bad Request
+                    details: "Thiết bị đang ở trạng thái PENDING. Vui lòng đợi Admin cấp phát Feed Key."
+                LoiDangOCheDoAuto:
+                  summary: Đang ở chế độ Tự Động
+                  value:
+                    code: 400
+                    message: Bad Request
+                    details: "Thiết bị đang ở chế độ Tự Động (AUTO). Vui lòng chuyển sang Thủ Công (MANUAL) trước khi tự điều khiển."
+
+  # ==========================================
+  # 7. AI ANALYSIS (TRÍ TUỆ NHÂN TẠO)
+  # ==========================================
+  /api/v1/farms/{farmId}/ai-analysis:
+    post:
+      tags: [AI Analysis]
+      summary: Upload ảnh để AI chẩn đoán bệnh lý
+      parameters:
+        - name: farmId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                analysis_type:
+                  type: string
+                  enum: [LEAF_DISEASE, FRUIT_SORTING]
+      responses:
+        '200':
+          description: Phân tích thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiAnalysisResult'
+              examples:
+                KetQuaBenhLa:
+                  summary: Chẩn đoán bệnh đốm lá
+                  value:
+                    result_label: "Bệnh đốm lá (Leaf Spot)"
+                    confidence_score: 0.95
+                    image_url: "https://yolofarm-storage.s3.amazonaws.com/leaf_123.jpg"
+        '400':
+          description: Lỗi định dạng file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                LoiDinhDang:
+                  summary: Upload file PDF thay vì file ảnh
+                  value:
+                    code: 400
+                    message: Bad Request
+                    details: "Định dạng file không hỗ trợ. Chỉ chấp nhận .JPG, .PNG."
+
+  /api/v1/farms/{farmId}/ai-logs:
+    get:
+      tags: [AI Analysis]
+      summary: Lấy nhật ký chẩn đoán AI của Nông trại
+      parameters:
+        - name: farmId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Danh sách lịch sử AI
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiLogResponse'
+              examples:
+                DanhSachLichSu:
+                  summary: Xem lại các lần chụp trước đây
+                  value:
+                    - id: "a11e4567-e89b-12d3-a456-426614171111"
+                      analysis_type: "LEAF_DISEASE"
+                      result_label: "Bệnh đốm lá"
+                      confidence_score: 0.95
+                      image_url: "https://yolofarm.com/images/1.jpg"
+                      analyzed_at: "2023-10-01T14:30:00Z"
+
+  # ==========================================
+  # 8. NOTIFICATIONS (THÔNG BÁO)
+  # ==========================================
+  /api/v1/notifications:
+    get:
+      tags: [Notifications]
+      summary: Lấy danh sách thông báo của User hiện tại
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: "Số thứ tự trang (mặc định: 1)"
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: "Số lượng bản ghi trên mỗi trang (mặc định: 20)"
+      responses:
+        '200':
+          description: Danh sách thông báo
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationResponse'
+              examples:
+                DanhSachThongBao:
+                  summary: Nông dân nhận được báo cáo duyệt thiết bị
+                  value:
+                    - id: "n11e4567-e89b-12d3-a456-426614171111"
+                      message: "Thiết bị [Máy bơm nước hồ 1] đã được Admin duyệt và cấp Feed Key."
+                      is_read: false
+                      created_at: "2023-10-02T10:00:00Z"
+
+  /api/v1/notifications/{notificationId}/read:
+    put:
+      tags: [Notifications]
+      summary: Đánh dấu một thông báo là đã đọc
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                ThanhCong:
+                  summary: Phản hồi thành công
+                  value:
+                    message: "Đã đánh dấu đọc."
+
+  /api/v1/devices/{deviceId}/mode:
+    patch:
+      tags: [Control]
+      summary: (FARMER) Đổi chế độ hoạt động (AUTO / MANUAL)
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                operating_mode:
+                  type: string
+                  enum: [AUTO, MANUAL]
+            examples:
+              DoiSangThuCong:
+                summary: Tắt tự động hóa để điều khiển tay
+                value:
+                  operating_mode: "MANUAL"
+      responses:
+        '200':
+          description: Chuyển chế độ thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                ThanhCong:
+                  summary: Phản hồi
+                  value:
+                    message: "Đã chuyển thiết bị sang chế độ MANUAL."
+
+# ==========================================
+# CÁC LƯỢC ĐỒ (SCHEMAS) TÁI SỬ DỤNG
+# ==========================================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        details:
+          type: string
+
+    RegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        email:
+          type: string
+
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+        expires_in:
+          type: integer
+        role:
+          type: string
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        created_at:
+          type: string
+
+    FarmCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        location:
+          type: string
+
+    FarmResponse:
+      type: object
+      required:
+        - id
+        - owner_id
+        - name
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+          description: "ID duy nhất của Nông trại (UUID)"
+        owner_id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+          description: "ID của người dùng sở hữu nông trại này"
+        name:
+          type: string
+          example: "YoloFarm Chi nhánh Pleiku"
+          description: "Tên gọi của nông trại"
+        location:
+          type: string
+          example: "123 Đường Lê Lợi, Pleiku, Gia Lai"
+          description: "Địa chỉ hoặc tọa độ địa lý (Có thể để trống)"
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-03-21T11:17:15Z"
+          description: "Thời điểm nông trại được tạo trên hệ thống"
+
+    # --- SCHEMAS NHÓM THIẾT BỊ (DEVICES) ---
+    DeviceRequest:
+      type: object
+      required: [farm_id, model_id, name]
+      properties:
+        farm_id:
+          type: string
+          format: uuid
+        model_id:
+          type: string
+          format: uuid
+          description: "ID của khuôn mẫu thiết bị (Lấy từ Device Models)"
+        name:
+          type: string
+          description: "Tên hiển thị do Nông dân đặt"
+
+    DeviceResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        farm_id:
+          type: string
+          format: uuid
+        model_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, ACTIVE, REJECTED]
+        adafruit_feed_key:
+          type: string
+          nullable: true
+        connection_status:
+          type: string
+          enum: [ONLINE, OFFLINE]
+          description: "FR3.4: Trạng thái kết nối"
+        last_seen:
+          type: string
+          format: date-time
+          nullable: true
+        operating_mode:
+          type: string
+          enum: [AUTO, MANUAL]
+          description: "FR4: Chế độ điều khiển"
+        is_active:
+          type: boolean
+
+    # --- SCHEMAS NHÓM TỰ ĐỘNG HÓA (RULES) ---
+    RuleCreateRequest:
+      type: object
+      required: [farm_id, rule_name, rule_type, action_device_id, action_command]
+      properties:
+        farm_id:
+          type: string
+          format: uuid
+        rule_name:
+          type: string
+        rule_type:
+          type: string
+          enum: [CONDITION, SCHEDULE]
+          description: "Loại tự động hóa: Theo cảm biến (CONDITION) hoặc Theo lịch trình (SCHEDULE)"
+        trigger_device_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: "Chỉ bắt buộc nếu rule_type là CONDITION"
+        operator:
+          type: string
+          enum: ['>', '<', '==']
+          nullable: true
+        threshold_value:
+          type: number
+          format: float
+          nullable: true
+        cron_expression:
+          type: string
+          nullable: true
+          description: "Chỉ bắt buộc nếu rule_type là SCHEDULE (VD: '0 6 * * *' là 6h sáng mỗi ngày)"
+        action_device_id:
+          type: string
+          format: uuid
+        action_command:
+          type: string
+          enum: ['ON', 'OFF']
+
+    RuleResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        farm_id:
+          type: string
+          format: uuid
+        rule_name:
+          type: string
+        rule_type:
+          type: string
+        trigger_device_id:
+          type: string
+          format: uuid
+          nullable: true
+        operator:
+          type: string
+          nullable: true
+        threshold_value:
+          type: number
+          format: float
+          nullable: true
+        cron_expression:
+          type: string
+          nullable: true
+        action_device_id:
+          type: string
+          format: uuid
+        action_command:
+          type: string
+        is_active:
+          type: boolean
+
+    # --- SCHEMAS NHÓM TELEMETRY ---
+    TelemetryDataPoint:
+      type: object
+      properties:
+        time:
+          type: string
+          format: date-time
+          description: "Thời gian ghi nhận dữ liệu (từ InfluxDB/Hypertable)"
+        value:
+          type: number
+          format: float
+          description: "Giá trị đo được (Nhiệt độ, độ ẩm...)"
+
+    # --- SCHEMAS NHÓM AI ANALYSIS ---
+    AiAnalysisResult:
+      type: object
+      properties:
+        result_label:
+          type: string
+          description: "Tên nhãn kết quả phân tích (Ví dụ: Bệnh vàng lá)"
+        confidence_score:
+          type: number
+          format: float
+          description: "Độ tự tin của mô hình (từ 0.0 đến 1.0)"
+        image_url:
+          type: string
+          description: "Đường dẫn URL để Frontend load lại ảnh"
+
+    AiLogResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        analysis_type:
+          type: string
+        result_label:
+          type: string
+        confidence_score:
+          type: number
+          format: float
+        image_url:
+          type: string
+        analyzed_at:
+          type: string
+          format: date-time
+
+    # --- SCHEMAS NHÓM NOTIFICATIONS ---
+    NotificationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        message:
+          type: string
+        is_read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    DeviceModelRequest:
+      type: object
+      required: [model_name, device_type, metric_type]
+      properties:
+        model_name:
+          type: string
+        device_type:
+          type: string
+          enum: [SENSOR, ACTUATOR]
+        metric_type:
+          type: string
+          enum: [TEMP, HUMIDITY, SOIL_MOISTURE, PUMP, LIGHT]
+        manufacturer:
+          type: string
+
+    DeviceModelResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        model_name:
+          type: string
+        device_type:
+          type: string
+        metric_type:
+          type: string
+        manufacturer:
+          type: string
