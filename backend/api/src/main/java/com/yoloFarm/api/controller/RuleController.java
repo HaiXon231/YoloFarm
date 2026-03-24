@@ -16,12 +16,16 @@ public class RuleController {
 
     @PostMapping
     public ResponseEntity<?> createRule(@RequestBody RuleCreateRequest request) {
-        return ResponseEntity.ok(null);
+        return ResponseEntity.ok(ruleService.createRule(request));
     }
 
     @PatchMapping("/{ruleId}/toggle")
     public ResponseEntity<?> toggleRule(@PathVariable("ruleId") UUID ruleId, @RequestBody Map<String, Boolean> request) {
-        return ResponseEntity.ok(null);
+        Boolean isActive = request.get("is_active");
+        if (isActive == null) {
+            isActive = request.getOrDefault("isActive", true);
+        }
+        return ResponseEntity.ok(ruleService.toggleRule(ruleId, isActive));
     }
 
     @DeleteMapping("/{ruleId}")

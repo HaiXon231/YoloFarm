@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
-@Component
+// @Component // Đã đóng lại để tránh Spring Context tự động kích hoạt làm vỡ các Integration Test khác
 public class TestRunner implements CommandLineRunner {
 
     private final IrrigationContext irrigationContext;

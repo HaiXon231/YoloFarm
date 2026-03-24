@@ -10,6 +10,7 @@ import com.yoloFarm.api.service.AiAnalysisService;
 import lombok.RequiredArgsConstructor;
 import java.util.UUID;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/farms")
@@ -21,13 +22,13 @@ public class FarmController {
     private final AiAnalysisService aiAnalysisService;
 
     @GetMapping
-    public ResponseEntity<?> getFarms() {
-        return ResponseEntity.ok(null);
+    public ResponseEntity<?> getFarms(@RequestHeader("X-User-Id") UUID userId) {
+        return ResponseEntity.ok(farmService.getFarmsByUserId(userId));
     }
 
     @PostMapping
-    public ResponseEntity<?> createFarm(@RequestBody FarmCreateRequest request) {
-        return ResponseEntity.ok(null);
+    public ResponseEntity<?> createFarm(@RequestHeader("X-User-Id") UUID userId, @RequestBody FarmCreateRequest request) {
+        return ResponseEntity.ok(farmService.createFarm(request, userId));
     }
 
     @GetMapping("/{farmId}")
@@ -47,12 +48,12 @@ public class FarmController {
 
     @GetMapping("/{farmId}/devices")
     public ResponseEntity<?> getFarmDevices(@PathVariable("farmId") UUID farmId) {
-        return ResponseEntity.ok(null);
+        return ResponseEntity.ok(deviceService.getDevicesByFarmId(farmId));
     }
 
     @GetMapping("/{farmId}/rules")
     public ResponseEntity<?> getFarmRules(@PathVariable("farmId") UUID farmId) {
-        return ResponseEntity.ok(null);
+        return ResponseEntity.ok(ruleService.getRulesByFarmId(farmId));
     }
 
     @PostMapping("/{farmId}/ai-analysis")

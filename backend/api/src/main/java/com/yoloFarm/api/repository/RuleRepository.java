@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface RuleRepository extends JpaRepository<Rule, UUID> {
     List<Rule> findByTriggerDeviceIdAndIsActiveTrue(UUID triggerDeviceId);
+    List<Rule> findByFarmId(UUID farmId);
 }

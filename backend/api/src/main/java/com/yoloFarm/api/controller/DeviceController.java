@@ -24,7 +24,13 @@ public class DeviceController {
 
     @PatchMapping("/{deviceId}")
     public ResponseEntity<?> updateDeviceName(@PathVariable("deviceId") UUID deviceId, @RequestBody Map<String, String> request) {
-        return ResponseEntity.ok(null);
+        String newName = request.get("name");
+        String statusStr = request.get("status");
+        com.yoloFarm.api.enums.DeviceStatusEnum statusEnum = null;
+        if (statusStr != null) {
+            statusEnum = com.yoloFarm.api.enums.DeviceStatusEnum.valueOf(statusStr);
+        }
+        return ResponseEntity.ok(deviceService.updateDevice(deviceId, newName, statusEnum));
     }
 
     @PostMapping("/{deviceId}/remove-requests")
@@ -34,7 +40,7 @@ public class DeviceController {
 
     @PostMapping("/requests")
     public ResponseEntity<?> requestNewDevice(@RequestBody DeviceRequest request) {
-        return ResponseEntity.ok(null);
+        return ResponseEntity.ok(deviceService.addDevice(request));
     }
 
     @GetMapping("/{deviceId}/telemetry")
