@@ -20,13 +20,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<?> handleEntityNotFoundException(EntityNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("code", 404, "error", "Not Found", "message", ex.getMessage()));
+                .body(Map.of("code", 404, "message", "Không tìm thấy tài nguyên", "details", ex.getMessage()));
     }
 
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<?> handleConflictException(ConflictException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(Map.of("code", 409, "error", "Conflict", "message", ex.getMessage()));
+                .body(Map.of("code", 409, "message", "Xung đột dữ liệu", "details", ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -35,31 +35,31 @@ public class GlobalExceptionHandler {
                 .map(e -> e.getField() + ": " + e.getDefaultMessage())
                 .collect(Collectors.joining(", "));
         return ResponseEntity.badRequest()
-                .body(Map.of("code", 400, "error", "Validation Failed", "message", details));
-    }
-
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<?> handleAccessDeniedException(AccessDeniedException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(Map.of("code", 403, "error", "Forbidden", "message", "Bạn không có quyền truy cập tài nguyên này."));
+                .body(Map.of("code", 400, "message", "Dữ liệu không hợp lệ", "details", details));
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<?> handleBadCredentialsException(BadCredentialsException ex) {
+    public ResponseEntity<?> handleBadCredentials(BadCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("code", 401, "error", "Unauthorized", "message", "Sai tên đăng nhập hoặc mật khẩu."));
+                .body(Map.of("code", 401, "message", "Sai tên đăng nhập hoặc mật khẩu"));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<?> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("code", 403, "message", "Bạn không có quyền truy cập tài nguyên này"));
     }
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<?> handleIllegalState(IllegalStateException ex) {
         return ResponseEntity.badRequest()
-                .body(Map.of("code", 400, "error", "Bad Request", "message", ex.getMessage()));
+                .body(Map.of("code", 400, "message", "Trạng thái không hợp lệ", "details", ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleGenericException(Exception ex) {
-        log.error("Unhandled exception", ex);
+    public ResponseEntity<?> handleGeneral(Exception ex) {
+        log.error("Lỗi hệ thống không xác định", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("code", 500, "error", "Internal Server Error", "message", "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau."));
+                .body(Map.of("code", 500, "message", "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau."));
     }
 }

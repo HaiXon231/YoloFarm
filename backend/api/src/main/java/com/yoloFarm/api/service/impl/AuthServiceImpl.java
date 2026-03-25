@@ -38,7 +38,7 @@ public class AuthServiceImpl implements AuthService {
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(RoleEnum.FARMER);
+        user.setRole(RoleEnum.FARMER);  // Mặc định là FARMER theo ERD/OpenAPI
         
         User savedUser = userRepository.save(user);
 

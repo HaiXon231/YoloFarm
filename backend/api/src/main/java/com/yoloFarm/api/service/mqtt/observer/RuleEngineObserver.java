@@ -24,7 +24,8 @@ public class RuleEngineObserver implements Observer {
     public void update(SensorData data) {
         log.info("RuleEngineObserver nhận dữ liệu: {} = {}", data.metricType(), data.value());
         
-        List<Rule> rules = ruleRepository.findByTriggerDeviceIdAndIsActiveTrue(data.deviceId());
+        // JOIN FETCH để tránh N+1 queries khi truy cập rule.getFarm() và rule.getActionDevice()
+        List<Rule> rules = ruleRepository.findActiveRulesWithAssociations(data.deviceId());
         
         for (Rule rule : rules) {
             boolean conditionMet = evaluateCondition(data.value(), rule.getOperator(), rule.getThresholdValue());

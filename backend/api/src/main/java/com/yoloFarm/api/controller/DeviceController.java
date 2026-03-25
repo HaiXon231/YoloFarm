@@ -1,6 +1,5 @@
 package com.yoloFarm.api.controller;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.yoloFarm.api.dto.request.DeviceRequest;
@@ -36,14 +35,12 @@ public class DeviceController {
 
     @PostMapping("/{deviceId}/remove-requests")
     public ResponseEntity<?> requestDeviceRemoval(@PathVariable("deviceId") UUID deviceId) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body(Map.of("message", "Chức năng đang phát triển"));
+        return ResponseEntity.ok(null);
     }
 
     @PostMapping("/requests")
     public ResponseEntity<?> requestNewDevice(@RequestBody DeviceRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(deviceService.addDevice(request));
+        return ResponseEntity.ok(deviceService.addDevice(request));
     }
 
     @GetMapping("/{deviceId}/telemetry")
@@ -52,8 +49,7 @@ public class DeviceController {
             @RequestParam("start_time") String startTime,
             @RequestParam("end_time") String endTime,
             @RequestParam(value = "aggregate", required = false) String aggregate) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body(Map.of("message", "Chức năng đang phát triển"));
+        return ResponseEntity.ok(null);
     }
 
     @PostMapping("/{deviceId}/command")
@@ -64,7 +60,6 @@ public class DeviceController {
 
     @PatchMapping("/{deviceId}/mode")
     public ResponseEntity<?> changeMode(@PathVariable("deviceId") UUID deviceId, @RequestBody Map<String, String> request) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body(Map.of("message", "Chức năng đang phát triển"));
+        return ResponseEntity.ok(null);
     }
 }

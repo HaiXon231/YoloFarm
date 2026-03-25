@@ -30,7 +30,7 @@ public class DeviceModel {
     @Column(nullable = false)
     private MetricTypeEnum metricType;
 
-    @Column(length = 100, nullable = false)
+    @Column(length = 100)
     private String manufacturer;
 
     @OneToMany(mappedBy = "model", fetch = FetchType.LAZY, cascade = CascadeType.ALL)

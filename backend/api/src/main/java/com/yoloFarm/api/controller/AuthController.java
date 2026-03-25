@@ -10,7 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -33,16 +33,13 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<UserProfile> getCurrentUser() {
-        User user = (User) SecurityContextHolder.getContext()
-                .getAuthentication().getPrincipal();
-
+    public ResponseEntity<UserProfile> getCurrentUser(@AuthenticationPrincipal User currentUser) {
         UserProfile profile = new UserProfile();
-        profile.setId(user.getId());
-        profile.setUsername(user.getUsername());
-        profile.setEmail(user.getEmail());
-        profile.setRole(user.getRole().name());
-        profile.setCreatedAt(user.getCreatedAt());
+        profile.setId(currentUser.getId());
+        profile.setUsername(currentUser.getUsername());
+        profile.setEmail(currentUser.getEmail());
+        profile.setRole(currentUser.getRole().name());
+        profile.setCreatedAt(currentUser.getCreatedAt());
         return ResponseEntity.ok(profile);
     }
 }

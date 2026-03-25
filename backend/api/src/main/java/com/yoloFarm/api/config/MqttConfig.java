@@ -27,34 +27,30 @@ public class MqttConfig {
     @Value("${adafruit.mqtt.password}")
     private String password;
 
+    private IMqttClient mqttClient;
+
     @Bean
     public IMqttClient mqttClient() throws MqttException {
-        // Chỉ tạo client instance, KHÔNG connect() ở đây
-        // → nếu Broker offline, app vẫn start được
-        return new MqttClient(brokerUrl, clientId);
+        // Chỉ tạo client, KHÔNG connect() ở đây
+        // → App vẫn start được dù broker offline
+        mqttClient = new MqttClient(brokerUrl, clientId);
+        return mqttClient;
     }
 
-    /**
-     * Kết nối MQTT sau khi Spring Boot đã khởi động hoàn tất.
-     * Nếu broker offline → log error nhưng app vẫn chạy.
-     * AutoReconnect = true → tự kết nối lại khi broker online.
-     */
     @EventListener(ApplicationReadyEvent.class)
-    public void connectToBroker() {
+    public void connectMqtt() {
         try {
-            IMqttClient client = mqttClient();
-            if (!client.isConnected()) {
-                MqttConnectOptions options = new MqttConnectOptions();
-                options.setAutomaticReconnect(true);
-                options.setCleanSession(true);
-                options.setUserName(username);
-                options.setPassword(password.toCharArray());
-                options.setConnectionTimeout(10);
-                client.connect(options);
-                log.info("MqttConfig: Đã kết nối thành công tới broker: {}", brokerUrl);
-            }
+            MqttConnectOptions options = new MqttConnectOptions();
+            options.setUserName(username);
+            options.setPassword(password.toCharArray());
+            options.setCleanSession(true);
+            options.setAutomaticReconnect(true);  // Tự kết nối lại khi mất kết nối
+
+            mqttClient.connect(options);
+            log.info("MqttConfig: Kết nối thành công tới Adafruit IO MQTT Broker!");
         } catch (MqttException e) {
-            log.error("MqttConfig: Không thể kết nối tới broker {}. App vẫn chạy, sẽ tự reconnect.", brokerUrl, e);
+            // App vẫn chạy bình thường, MQTT sẽ tự reconnect sau
+            log.error("MqttConfig: Không thể kết nối MQTT Broker. Sẽ thử kết nối lại tự động.", e);
         }
     }
 }

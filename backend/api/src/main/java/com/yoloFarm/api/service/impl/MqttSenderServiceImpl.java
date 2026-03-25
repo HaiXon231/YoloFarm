@@ -21,15 +21,16 @@ public class MqttSenderServiceImpl implements MqttSenderService {
 
     @Override
     public void sendCommand(String adafruitFeedKey, String command) {
-        String topic = username + "/feeds/" + adafruitFeedKey;
-        MqttMessage message = new MqttMessage(command.getBytes());
-        message.setQos(1);
-
         try {
+            String topic = username + "/feeds/" + adafruitFeedKey;
+            
+            MqttMessage message = new MqttMessage(command.getBytes());
+            message.setQos(1); // Mức Quality of Service 1: Đảm bảo ít nhất message đến được đích
+            
             mqttClient.publish(topic, message);
-            log.info("MqttSender: Đã gửi lệnh [{}] tới feed [{}]", command, adafruitFeedKey);
+            log.info("MqttSender: Đã pub lệnh điều khiển [{}] xuống topic [{}]", command, topic);
         } catch (MqttException e) {
-            // Ném exception để caller biết lệnh chưa được gửi → trả HTTP 500/502
+            // Ném exception để caller biết lệnh chưa gửi được → trả HTTP 500/502
             throw new RuntimeException("Không thể gửi lệnh MQTT tới feed: " + adafruitFeedKey, e);
         }
     }

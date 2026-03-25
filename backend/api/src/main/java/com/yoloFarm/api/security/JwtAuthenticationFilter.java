@@ -21,8 +21,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
+@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
@@ -66,7 +66,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } catch (JwtException e) {
             log.warn("JWT Token không hợp lệ: {}", e.getMessage());
         } catch (Exception e) {
-            log.error("Lỗi không xác định khi xử lý JWT Token", e);
+            log.error("Lỗi không xác định khi xử lý JWT: {}", e.getMessage());
         }
         filterChain.doFilter(request, response);
     }

@@ -79,7 +79,8 @@ public class MqttReceiverService implements Subject {
             log.info("MqttReceiver: Nhận dữ liệu [{}] từ feed [{}]", payload, feedKey);
 
             // Tra soát ID Thiết bị theo đoạn mã feed trên Adafruit
-            Optional<Device> deviceOpt = deviceRepository.findByAdafruitFeedKey(feedKey);
+            // Tra soát ID Thiết bị theo đoạn mã feed trên Adafruit (JOIN FETCH để tránh LazyInit)
+            Optional<Device> deviceOpt = deviceRepository.findByAdafruitFeedKeyWithModelAndFarm(feedKey);
             
             if (deviceOpt.isPresent()) {
                 Device device = deviceOpt.get();
