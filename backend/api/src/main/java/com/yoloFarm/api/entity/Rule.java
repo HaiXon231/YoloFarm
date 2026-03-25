@@ -26,6 +26,9 @@ public class Rule {
     @Column(nullable = false)
     private RuleTypeEnum ruleType;
 
+    @Column(name = "rule_name", length = 100, nullable = false)
+    private String ruleName;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trigger_device_id")
     private Device triggerDevice;

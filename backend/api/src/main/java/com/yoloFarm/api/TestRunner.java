@@ -1,9 +1,8 @@
 package com.yoloFarm.api;
 
 import com.yoloFarm.api.service.strategy.IrrigationContext;
-import com.yoloFarm.api.service.strategy.ManualStrategy; // Import Strategy
+import com.yoloFarm.api.service.strategy.ManualStrategy;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
@@ -26,11 +25,8 @@ public class TestRunner implements CommandLineRunner {
         UUID dummyFarmId = UUID.randomUUID();
         UUID dummyDeviceId = UUID.randomUUID();
 
-        // Đong vai trò như 1 Client ra lệnh, ta set chế độ sang Hằng tay (Manual)
-        irrigationContext.setStrategy(manualStrategy);
-
-        // Phát lệnh kích hoạt
-        irrigationContext.executeControl(dummyFarmId, dummyDeviceId, "ON");
+        // Strategy truyền qua tham số, không dùng setStrategy() nữa
+        irrigationContext.executeControl(manualStrategy, dummyFarmId, dummyDeviceId, "ON");
 
         System.out.println("========== KẾT THÚC TEST STRATEGY PATTERN ==========");
     }

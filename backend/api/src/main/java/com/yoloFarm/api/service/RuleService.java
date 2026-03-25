@@ -11,6 +11,7 @@ import com.yoloFarm.api.repository.RuleRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -18,12 +19,14 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class RuleService {
 
     private final RuleRepository ruleRepository;
     private final FarmRepository farmRepository;
     private final DeviceRepository deviceRepository;
 
+    @Transactional
     public RuleResponse createRule(RuleCreateRequest request) {
         Farm farm = farmRepository.findById(request.getFarmId())
                 .orElseThrow(() -> new EntityNotFoundException("Farm not found with id: " + request.getFarmId()));
@@ -39,6 +42,7 @@ public class RuleService {
 
         Rule rule = Rule.builder()
                 .farm(farm)
+                .ruleName(request.getRuleName())
                 .ruleType(request.getRuleType())
                 .triggerDevice(triggerDevice)
                 .operator(request.getOperator())
@@ -60,6 +64,7 @@ public class RuleService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public RuleResponse toggleRule(UUID ruleId, boolean isActive) {
         Rule rule = ruleRepository.findById(ruleId)
                 .orElseThrow(() -> new EntityNotFoundException("Rule not found with id: " + ruleId));
@@ -88,8 +93,7 @@ public class RuleService {
         response.setActionCommand(rule.getActionCommand());
         response.setIsActive(rule.getIsActive());
         
-        // Entity không có cấu trúc Name lưu vào DB, dùng Tên gộp chung
-        response.setRuleName("Rule-" + rule.getId());
+        response.setRuleName(rule.getRuleName());
         return response;
     }
 }

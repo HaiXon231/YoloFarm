@@ -1,5 +1,6 @@
 package com.yoloFarm.api.service.mqtt.observer;
 
+import com.yoloFarm.api.dto.SensorData;
 import com.yoloFarm.api.entity.Rule;
 import com.yoloFarm.api.repository.RuleRepository;
 import com.yoloFarm.api.service.strategy.AutoThresholdStrategy;
@@ -9,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.UUID;
 
 @Component
 @Slf4j
@@ -21,20 +21,21 @@ public class RuleEngineObserver implements Observer {
     private final AutoThresholdStrategy autoThresholdStrategy;
 
     @Override
-    public void update(UUID deviceId, String metricType, Float value) {
-        log.info("RuleEngineObserver nhận dữ liệu: {} = {}", metricType, value);
+    public void update(SensorData data) {
+        log.info("RuleEngineObserver nhận dữ liệu: {} = {}", data.metricType(), data.value());
         
-        List<Rule> rules = ruleRepository.findByTriggerDeviceIdAndIsActiveTrue(deviceId);
+        List<Rule> rules = ruleRepository.findByTriggerDeviceIdAndIsActiveTrue(data.deviceId());
         
         for (Rule rule : rules) {
-            boolean conditionMet = evaluateCondition(value, rule.getOperator(), rule.getThresholdValue());
+            boolean conditionMet = evaluateCondition(data.value(), rule.getOperator(), rule.getThresholdValue());
             
             if (conditionMet) {
                 log.info("Rule Triggered: Đã tự động bật/tắt thiết bị dựa trên cảm biến ({} {} {})", 
-                         value, rule.getOperator(), rule.getThresholdValue());
+                         data.value(), rule.getOperator(), rule.getThresholdValue());
                 
-                irrigationContext.setStrategy(autoThresholdStrategy);
+                // Strategy truyền qua tham số, không dùng setStrategy() nữa
                 irrigationContext.executeControl(
+                        autoThresholdStrategy,
                         rule.getFarm().getId(),
                         rule.getActionDevice().getId(),
                         rule.getActionCommand().name()

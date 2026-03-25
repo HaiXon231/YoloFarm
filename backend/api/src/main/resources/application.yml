@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/yolofarm_db
-    username: postgres
-    password: 23012005
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:changeme}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -12,3 +12,14 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+jwt:
+  secret-key: ${JWT_SECRET_KEY:3cfa76ef14937c1c0ea519f8fc057a80fcd04a7420f8e8bcd0a7567c272e007b}
+  expiration: 86400000
+
+adafruit:
+  mqtt:
+    broker-url: "tcp://io.adafruit.com:1883"
+    client-id: "YoloFarm_${random.int[100,999]}"
+    username: ${ADAFRUIT_USERNAME:YOUR_ADAFRUIT_USERNAME}
+    password: ${ADAFRUIT_IO_KEY:YOUR_ADAFRUIT_IO_KEY}

@@ -19,6 +19,8 @@ public class EntityMappingIntegrationTest {
     public void testUserEntityMapping() {
         User user = User.builder()
                 .username("test_farmer")
+                .email("farmer@test.com")
+                .password("hashed_pass")
                 .role(RoleEnum.FARMER)
                 .build();
 

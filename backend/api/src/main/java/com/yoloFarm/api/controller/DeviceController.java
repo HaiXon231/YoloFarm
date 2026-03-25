@@ -1,5 +1,6 @@
 package com.yoloFarm.api.controller;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.yoloFarm.api.dto.request.DeviceRequest;
@@ -35,12 +36,14 @@ public class DeviceController {
 
     @PostMapping("/{deviceId}/remove-requests")
     public ResponseEntity<?> requestDeviceRemoval(@PathVariable("deviceId") UUID deviceId) {
-        return ResponseEntity.ok(null);
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                .body(Map.of("message", "Chức năng đang phát triển"));
     }
 
     @PostMapping("/requests")
     public ResponseEntity<?> requestNewDevice(@RequestBody DeviceRequest request) {
-        return ResponseEntity.ok(deviceService.addDevice(request));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(deviceService.addDevice(request));
     }
 
     @GetMapping("/{deviceId}/telemetry")
@@ -49,18 +52,19 @@ public class DeviceController {
             @RequestParam("start_time") String startTime,
             @RequestParam("end_time") String endTime,
             @RequestParam(value = "aggregate", required = false) String aggregate) {
-        return ResponseEntity.ok(null);
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                .body(Map.of("message", "Chức năng đang phát triển"));
     }
 
     @PostMapping("/{deviceId}/command")
     public ResponseEntity<?> sendCommand(@PathVariable("deviceId") UUID deviceId, @RequestBody Map<String, String> request) {
-        irrigationContext.setStrategy(manualStrategy);
-        boolean success = irrigationContext.executeControl(null, deviceId, request.get("command"));
+        boolean success = irrigationContext.executeControl(manualStrategy, null, deviceId, request.get("command"));
         return ResponseEntity.ok(Map.of("message", "Lệnh đã được gửi thành công", "success", success));
     }
 
     @PatchMapping("/{deviceId}/mode")
     public ResponseEntity<?> changeMode(@PathVariable("deviceId") UUID deviceId, @RequestBody Map<String, String> request) {
-        return ResponseEntity.ok(null);
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                .body(Map.of("message", "Chức năng đang phát triển"));
     }
 }

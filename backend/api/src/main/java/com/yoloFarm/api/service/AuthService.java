@@ -1,9 +1,11 @@
 package com.yoloFarm.api.service;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
+import com.yoloFarm.api.dto.request.LoginRequest;
+import com.yoloFarm.api.dto.request.RegisterRequest;
+import com.yoloFarm.api.dto.response.LoginResponse;
+import com.yoloFarm.api.dto.response.UserProfile;
 
-@Service
-@RequiredArgsConstructor
-public class AuthService {
+public interface AuthService {
+    UserProfile register(RegisterRequest request);
+    LoginResponse login(LoginRequest request);
 }

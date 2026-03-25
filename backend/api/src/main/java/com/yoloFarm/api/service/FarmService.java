@@ -9,6 +9,7 @@ import com.yoloFarm.api.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -16,17 +17,20 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class FarmService {
 
     private final FarmRepository farmRepository;
     private final UserRepository userRepository;
 
+    @Transactional
     public FarmResponse createFarm(FarmCreateRequest request, UUID ownerId) {
         User owner = userRepository.findById(ownerId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + ownerId));
 
         Farm farm = Farm.builder()
                 .name(request.getName())
+                .location(request.getLocation())
                 .owner(owner)
                 .build();
         
@@ -46,6 +50,8 @@ public class FarmService {
         response.setId(farm.getId());
         response.setOwnerId(farm.getOwner().getId());
         response.setName(farm.getName());
+        response.setLocation(farm.getLocation());
+        response.setCreatedAt(farm.getCreatedAt());
         return response;
     }
 }

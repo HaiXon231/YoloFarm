@@ -1,7 +1,7 @@
 package com.yoloFarm.api.service.mqtt.observer;
 
-import java.util.UUID;
+import com.yoloFarm.api.dto.SensorData;
 
 public interface Observer {
-    void update(UUID deviceId, String metricType, Float value);
+    void update(SensorData data);
 }

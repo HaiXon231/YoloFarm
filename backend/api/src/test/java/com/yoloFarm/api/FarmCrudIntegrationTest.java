@@ -16,9 +16,15 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.eclipse.paho.client.mqttv3.IMqttClient;
+
 @SpringBootTest
 @Transactional // Quan trọng nhất: Tự động xóa sạch những cặn bẩn/dữ liệu test khỏi DB thật sau khi chạy xong
 public class FarmCrudIntegrationTest {
+
+    @MockitoBean
+    private IMqttClient mqttClient;
 
     @Autowired
     private FarmService farmService;
@@ -34,6 +40,8 @@ public class FarmCrudIntegrationTest {
         // [1] - CHUẨN BỊ ĐỐI TƯỢNG THẬT (REAL OBJECT IN DB)
         User testOwner = User.builder()
                 .username("real_test_user")
+                .email("real_test_user@test.com")
+                .password("hashed_password_placeholder")
                 .role(RoleEnum.FARMER)
                 .build();
         

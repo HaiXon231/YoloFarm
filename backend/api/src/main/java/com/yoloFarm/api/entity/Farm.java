@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.util.UUID;
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "farms")
@@ -24,9 +25,20 @@ public class Farm {
     @Column(length = 100, nullable = false)
     private String name;
 
+    @Column(length = 255)
+    private String location;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
     @OneToMany(mappedBy = "farm", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<Device> devices;
 
     @OneToMany(mappedBy = "farm", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<Rule> rules;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
 }

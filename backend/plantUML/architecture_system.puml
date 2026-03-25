@@ -1,0 +1,72 @@
+@startuml
+skinparam componentStyle uml2
+skinparam linetype ortho
+skinparam backgroundColor white
+skinparam Nodesep 80
+skinparam Ranksep 80
+skinparam ArrowMessageAlignment center
+skinparam padding 5
+
+actor "Quản Trị Viên" as Admin
+actor "Nông Dân" as User
+
+node "Tầng Giao diện (Frontend)" <<React>> {
+    [Web Dashboard\n(Admin & Farmer UI)] as WebApp
+}
+
+cloud "Tầng Broker" <<Adafruit IO>> {
+    [MQTT Broker Hub] as Broker
+}
+
+node "Tầng Xử lý Trung tâm (Backend API)" <<Java Spring Boot>> {
+    [REST API Services\n(Xác thực JWT & Phân tuyến)] as API
+    [Rule Engine & Scheduler\n(Logic Tự động hóa)] as Engine
+    [MQTT Client Service\n(Kết nối Broker)] as MQTTService
+}
+
+node "Tầng AI (Microservice)" <<Python / FastAPI>> {
+    [AI Inference Service\n(YOLOv8 / TensorFlow)] as AIService
+}
+
+database "Tầng Dữ liệu" <<PostgreSQL Instance>> {
+    [Dữ liệu chuẩn\n(Users, Rules, AI History)] as RDB
+    [Dữ liệu Chuỗi thời gian\n(Logical Hypertables)] as TSDB
+}
+
+node "Tầng Thiết bị (Edge Devices)" <<Python Scripts>> {
+    [Mock Sensors] as Sensors
+    [Mock Actuators] as Actuators
+}
+
+' --- KẾT NỐI (CONNECTIONS) ---
+
+' Tương tác của người dùng
+Admin -down-> WebApp : " Quản lý "
+User -down-> WebApp : " Điều khiển "
+
+' Giao tiếp Frontend - Backend
+WebApp -down-> API : " Gửi lệnh, Upload ảnh\n(Kèm JWT) "
+WebApp <.down. API : " Nhận cập nhật Realtime\n(WebSocket STOMP) "
+
+' Tương tác Backend - AI
+API -left-> AIService : " Chuyển tiếp ảnh\nnhận kết quả phân tích "
+
+' Tương tác Backend - Database
+API -down-> RDB : " Đọc/Ghi (Bao gồm lịch sử AI) "
+API -down-> TSDB : " Truy vấn lịch sử cảm biến "
+Engine -down-> RDB : " Đọc điều kiện (Rule/Cron) "
+MQTTService -down-> TSDB : " Lưu dữ liệu cảm biến "
+
+' Giao tiếp nội bộ Backend
+API -right-> MQTTService : " Lệnh thủ công "
+Engine -right-> MQTTService : " Lệnh tự động "
+MQTTService -left-> Engine : " Notify dữ liệu cảm biến\n(Observer Pattern) "
+
+' Giao tiếp Backend - Broker
+MQTTService <--> Broker : " Subscribe / Publish "
+
+' Giao tiếp Broker - Thiết bị
+Sensors -up-> Broker : " Publish data "
+Broker -down-> Actuators : " Subscribe lệnh "
+
+@enduml

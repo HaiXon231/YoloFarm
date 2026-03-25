@@ -1,0 +1,106 @@
+@startuml
+' Cấu hình giao diện
+skinparam style strictuml
+skinparam classAttributeIconSize 0
+skinparam backgroundColor white
+skinparam roundcorner 5
+skinparam class {
+    BackgroundColor LightCyan
+    BorderColor Blue
+}
+
+package "Data Transfer Objects" {
+    class SensorData <<record>> {
+        + farmId: UUID
+        + deviceId: UUID
+        + metricType: String
+        + value: Float
+        + timestamp: Instant
+    }
+}
+
+package "Observer Pattern (Nhận & Xử lý Dữ liệu Cảm biến)" {
+    interface Subject {
+        + attach(obs: Observer)
+        + detach(obs: Observer)
+        + notifyObservers(data: SensorData)
+    }
+
+    class MqttReceiverService {
+        - observers: List<Observer>
+        + onMessageReceived(topic: String, payload: String)
+        + notifyObservers(data: SensorData)
+    }
+    Subject <|.. MqttReceiverService
+
+    interface Observer {
+        + update(data: SensorData)
+    }
+    MqttReceiverService o--> "*" Observer : Manages
+
+    class DatabaseLoggerObserver {
+        + update(data: SensorData)
+        - saveToTimeSeriesDB()
+    }
+    class WebSocketNotifierObserver {
+        + update(data: SensorData)
+        - pushToReactFrontend()
+    }
+    class RuleEngineObserver {
+        + update(data: SensorData)
+        - checkSensorConditions()
+    }
+    Observer <|.. DatabaseLoggerObserver
+    Observer <|.. WebSocketNotifierObserver
+    Observer <|.. RuleEngineObserver
+}
+
+package "Triggers (Các Nguồn Kích Hoạt Khác)" {
+    class DeviceController <<REST API>> {
+        + toggleDevice(deviceId: UUID, command: String)
+        ' Nhận API khi Nông dân bấm tay trên Web
+    }
+
+    class DynamicSchedulerService <<Task Scheduler>> {
+        - taskScheduler: ThreadPoolTaskScheduler
+        + scheduleRule(rule: Rule)
+        ' Kích hoạt khi đến giờ hẹn (Cronjob)
+    }
+}
+
+package "Strategy Pattern (Lõi Thực thi Điều khiển)" {
+    class IrrigationContext {
+        + executeControl(strategy: IrrigationStrategy, farmId: UUID, deviceId: UUID, command: String): Boolean
+    }
+
+    interface IrrigationStrategy <<Interface>> {
+        + executeControl(farmId: UUID, deviceId: UUID, command: String): Boolean
+    }
+
+    class ManualStrategy {
+        + executeControl(farmId: UUID, deviceId: UUID, command: String): Boolean
+        - validateModeIsManual(): Boolean
+    }
+
+    class ScheduledStrategy {
+        + executeControl(farmId: UUID, deviceId: UUID, command: String): Boolean
+        - validateModeIsAuto(): Boolean
+    }
+
+    class AutoThresholdStrategy {
+        + executeControl(farmId: UUID, deviceId: UUID, command: String): Boolean
+        - validateModeIsAuto(): Boolean
+    }
+
+    IrrigationContext ..> "1" IrrigationStrategy : Receives as parameter
+    IrrigationStrategy <|.. ManualStrategy
+    IrrigationStrategy <|.. ScheduledStrategy
+    IrrigationStrategy <|.. AutoThresholdStrategy
+}
+
+' --- LUỒNG GIAO TIẾP (BRIDGING THE PATTERNS) ---
+RuleEngineObserver ..> IrrigationContext : "1. Gọi với AutoThresholdStrategy\nkhi thỏa mãn ĐK Cảm biến"
+DeviceController ..> IrrigationContext : "2. Gọi với ManualStrategy\nkhi Nông dân bấm Bật/Tắt"
+DynamicSchedulerService ..> IrrigationContext : "3. Gọi với ScheduledStrategy\nkhi đến giờ đã hẹn"
+
+@enduml

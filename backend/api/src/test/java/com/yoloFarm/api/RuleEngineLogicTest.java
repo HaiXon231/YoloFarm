@@ -1,5 +1,6 @@
 package com.yoloFarm.api;
 
+import com.yoloFarm.api.dto.SensorData;
 import com.yoloFarm.api.entity.Device;
 import com.yoloFarm.api.entity.Farm;
 import com.yoloFarm.api.entity.Rule;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -53,6 +55,7 @@ public class RuleEngineLogicTest {
         // [CHUẨN BỊ] - KHỞI TẠO MOCK DATA
         UUID sensorId = UUID.randomUUID();
         UUID pumpId = UUID.randomUUID();
+        UUID farmId = UUID.randomUUID();
 
         // Máy bơm (Sẽ bị kích hoạt)
         Device mockPump = new Device();
@@ -61,7 +64,7 @@ public class RuleEngineLogicTest {
         mockPump.setAdafruitFeedKey("pump-feed-01");
 
         Farm mockFarm = new Farm();
-        mockFarm.setId(UUID.randomUUID());
+        mockFarm.setId(farmId);
 
         // Luật: ĐỘ ẨM MÀ BÉ HƠN 40 THÌ BẮT ĐẦU BƠM (Lệnh ON)
         Rule mockRule = new Rule();
@@ -82,11 +85,11 @@ public class RuleEngineLogicTest {
 
         // [THỰC THI] - CHẠY TEST
         // Đóng vai trò Cảm biến vừa gửi về độ ẩm = 35.5 (Tức là Bé hơn 40 -> Cần tưới)
-        ruleEngineObserver.update(sensorId, "SOIL_MOISTURE", 35.5f);
+        SensorData data = new SensorData(farmId, sensorId, "SOIL_MOISTURE", 35.5f, Instant.now());
+        ruleEngineObserver.update(data);
 
         // [KIỂM TRA] - ASSERTION
         // Khẳng định chắc chắn 100% rằng hệ thống ĐÃ RA LỆNH "ON" ở kênh "pump-feed-01". 
-        // times(1) có nghĩa là hàm này bị ép phải chạy chính xác 1 lần, nếu 0 lần -> Báo lỗi Test Fail.
         verify(mqttSenderService, times(1)).sendCommand("pump-feed-01", "ON");
     }
 
@@ -94,6 +97,8 @@ public class RuleEngineLogicTest {
     public void testRuleEngineIgnoresWhenConditionNotMet() {
         // [CHUẨN BỊ]
         UUID sensorId = UUID.randomUUID();
+        UUID farmId = UUID.randomUUID();
+
         Rule mockRule = new Rule();
         mockRule.setOperator("<");
         mockRule.setThresholdValue(40.0f);
@@ -103,7 +108,8 @@ public class RuleEngineLogicTest {
         
         // [THỰC THI]
         // Đóng vai Cảm biến gửi về độ ẩm = 50.0 (Lớn hơn 40 -> Không cần tưới, đất vẫn ẩm)
-        ruleEngineObserver.update(sensorId, "SOIL_MOISTURE", 50.0f);
+        SensorData data = new SensorData(farmId, sensorId, "SOIL_MOISTURE", 50.0f, Instant.now());
+        ruleEngineObserver.update(data);
         
         // [KIỂM TRA]
         // Khẳng định hàm gửi lệnh của MqttSender KHÔNG BAO GIỜ bị gọi.

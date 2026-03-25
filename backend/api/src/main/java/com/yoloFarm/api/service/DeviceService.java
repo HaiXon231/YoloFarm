@@ -14,6 +14,7 @@ import com.yoloFarm.api.repository.FarmRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class DeviceService {
 
     private final DeviceRepository deviceRepository;
@@ -34,6 +36,7 @@ public class DeviceService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public DeviceResponse addDevice(DeviceRequest request) {
         Farm farm = farmRepository.findById(request.getFarmId())
                 .orElseThrow(() -> new EntityNotFoundException("Farm not found with id: " + request.getFarmId()));
@@ -54,6 +57,7 @@ public class DeviceService {
         return mapToResponse(device);
     }
 
+    @Transactional
     public DeviceResponse updateDevice(UUID deviceId, String newName, DeviceStatusEnum newStatus) {
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new EntityNotFoundException("Device not found with id: " + deviceId));

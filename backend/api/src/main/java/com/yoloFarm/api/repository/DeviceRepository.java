@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface DeviceRepository extends JpaRepository<Device, UUID> {
     List<Device> findByFarmId(UUID farmId);
+    java.util.Optional<Device> findByAdafruitFeedKey(String adafruitFeedKey);
 }
