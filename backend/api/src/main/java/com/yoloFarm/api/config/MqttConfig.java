@@ -1,10 +1,12 @@
 package com.yoloFarm.api.config;
 
+import com.yoloFarm.api.service.mqtt.MqttReceiverService;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.IMqttClient;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
@@ -27,19 +29,30 @@ public class MqttConfig {
     @Value("${adafruit.mqtt.password}")
     private String password;
 
-    private IMqttClient mqttClient;
+    private final ObjectProvider<IMqttClient> mqttClientProvider;
+    private final ObjectProvider<MqttReceiverService> mqttReceiverServiceProvider;
 
-    @Bean
+    public MqttConfig(
+            ObjectProvider<IMqttClient> mqttClientProvider,
+            ObjectProvider<MqttReceiverService> mqttReceiverServiceProvider
+    ) {
+        this.mqttClientProvider = mqttClientProvider;
+        this.mqttReceiverServiceProvider = mqttReceiverServiceProvider;
+    }
+
+    @Bean(destroyMethod = "disconnectForcibly")
     public IMqttClient mqttClient() throws MqttException {
-        // Chỉ tạo client, KHÔNG connect() ở đây
-        // → App vẫn start được dù broker offline
-        mqttClient = new MqttClient(brokerUrl, clientId);
-        return mqttClient;
+        return new MqttClient(brokerUrl, clientId);
     }
 
     @EventListener(ApplicationReadyEvent.class)
     public void connectMqtt() {
         try {
+            IMqttClient mqttClient = mqttClientProvider.getIfAvailable();
+            if (mqttClient == null || mqttClient.isConnected()) {
+                return;
+            }
+
             MqttConnectOptions options = new MqttConnectOptions();
             options.setUserName(username);
             options.setPassword(password.toCharArray());
@@ -48,6 +61,11 @@ public class MqttConfig {
 
             mqttClient.connect(options);
             log.info("MqttConfig: Kết nối thành công tới Adafruit IO MQTT Broker!");
+
+            MqttReceiverService receiverService = mqttReceiverServiceProvider.getIfAvailable();
+            if (receiverService != null) {
+                receiverService.subscribeIfConnected();
+            }
         } catch (MqttException e) {
             // App vẫn chạy bình thường, MQTT sẽ tự reconnect sau
             log.error("MqttConfig: Không thể kết nối MQTT Broker. Sẽ thử kết nối lại tự động.", e);

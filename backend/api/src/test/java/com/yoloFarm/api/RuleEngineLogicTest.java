@@ -76,7 +76,7 @@ public class RuleEngineLogicTest {
         mockRule.setActionCommand(ActionCommandEnum.ON);
 
         // Hướng dẫn Mockito: Nếu truy vấn Database bằng sensorId -> Trả về mockRule
-        when(ruleRepository.findByTriggerDeviceIdAndIsActiveTrue(sensorId))
+        when(ruleRepository.findActiveRulesWithAssociations(sensorId))
                 .thenReturn(List.of(mockRule));
         
         // Hướng dẫn Mockito: Nếu Strategy tìm máy bơm trong Database -> Trả về mockPump
@@ -103,7 +103,7 @@ public class RuleEngineLogicTest {
         mockRule.setOperator("<");
         mockRule.setThresholdValue(40.0f);
         
-        when(ruleRepository.findByTriggerDeviceIdAndIsActiveTrue(sensorId))
+        when(ruleRepository.findActiveRulesWithAssociations(sensorId))
                 .thenReturn(List.of(mockRule));
         
         // [THỰC THI]

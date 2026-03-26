@@ -10,6 +10,7 @@ import com.yoloFarm.api.repository.FarmRepository;
 import com.yoloFarm.api.repository.RuleRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,17 +28,25 @@ public class RuleService {
     private final DeviceRepository deviceRepository;
 
     @Transactional
-    public RuleResponse createRule(RuleCreateRequest request) {
-        Farm farm = farmRepository.findById(request.getFarmId())
+    public RuleResponse createRule(RuleCreateRequest request, UUID ownerId) {
+        Farm farm = farmRepository.findByIdAndOwnerId(request.getFarmId(), ownerId)
                 .orElseThrow(() -> new EntityNotFoundException("Farm not found with id: " + request.getFarmId()));
 
-        Device actionDevice = deviceRepository.findById(request.getActionDeviceId())
+        Device actionDevice = deviceRepository.findByIdAndFarmOwnerId(request.getActionDeviceId(), ownerId)
                 .orElseThrow(() -> new EntityNotFoundException("Action Device not found with id: " + request.getActionDeviceId()));
+
+        if (!actionDevice.getFarm().getId().equals(farm.getId())) {
+            throw new AccessDeniedException("Action device không thuộc farm này");
+        }
 
         Device triggerDevice = null;
         if (request.getTriggerDeviceId() != null) {
-            triggerDevice = deviceRepository.findById(request.getTriggerDeviceId())
+            triggerDevice = deviceRepository.findByIdAndFarmOwnerId(request.getTriggerDeviceId(), ownerId)
                     .orElseThrow(() -> new EntityNotFoundException("Trigger Device not found with id: " + request.getTriggerDeviceId()));
+
+            if (!triggerDevice.getFarm().getId().equals(farm.getId())) {
+                throw new AccessDeniedException("Trigger device không thuộc farm này");
+            }
         }
 
         Rule rule = Rule.builder()
@@ -57,21 +66,69 @@ public class RuleService {
         return mapToResponse(rule);
     }
 
-    public List<RuleResponse> getRulesByFarmId(UUID farmId) {
-        return ruleRepository.findByFarmId(farmId)
+    public List<RuleResponse> getRulesByFarmId(UUID farmId, UUID ownerId) {
+        if (!farmRepository.existsByIdAndOwnerId(farmId, ownerId)) {
+            throw new AccessDeniedException("Bạn không có quyền truy cập rules của nông trại này");
+        }
+
+        return ruleRepository.findByFarmIdAndFarmOwnerId(farmId, ownerId)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
     @Transactional
-    public RuleResponse toggleRule(UUID ruleId, boolean isActive) {
-        Rule rule = ruleRepository.findById(ruleId)
+    public RuleResponse toggleRule(UUID ruleId, boolean isActive, UUID ownerId) {
+        Rule rule = ruleRepository.findByIdAndFarmOwnerId(ruleId, ownerId)
                 .orElseThrow(() -> new EntityNotFoundException("Rule not found with id: " + ruleId));
         
         rule.setIsActive(isActive);
         rule = ruleRepository.save(rule);
         return mapToResponse(rule);
+    }
+
+    @Transactional
+    public void deleteRule(UUID ruleId, UUID ownerId) {
+        Rule rule = ruleRepository.findByIdAndFarmOwnerId(ruleId, ownerId)
+                .orElseThrow(() -> new EntityNotFoundException("Rule not found with id: " + ruleId));
+        ruleRepository.delete(rule);
+    }
+
+    @Transactional
+    public RuleResponse updateRule(UUID ruleId, RuleCreateRequest request, UUID ownerId) {
+        Rule existing = ruleRepository.findByIdAndFarmOwnerId(ruleId, ownerId)
+                .orElseThrow(() -> new EntityNotFoundException("Rule not found with id: " + ruleId));
+
+        Farm farm = farmRepository.findByIdAndOwnerId(request.getFarmId(), ownerId)
+                .orElseThrow(() -> new EntityNotFoundException("Farm not found with id: " + request.getFarmId()));
+
+        Device actionDevice = deviceRepository.findByIdAndFarmOwnerId(request.getActionDeviceId(), ownerId)
+                .orElseThrow(() -> new EntityNotFoundException("Action Device not found with id: " + request.getActionDeviceId()));
+
+        if (!actionDevice.getFarm().getId().equals(farm.getId())) {
+            throw new AccessDeniedException("Action device không thuộc farm này");
+        }
+
+        Device triggerDevice = null;
+        if (request.getTriggerDeviceId() != null) {
+            triggerDevice = deviceRepository.findByIdAndFarmOwnerId(request.getTriggerDeviceId(), ownerId)
+                    .orElseThrow(() -> new EntityNotFoundException("Trigger Device not found with id: " + request.getTriggerDeviceId()));
+            if (!triggerDevice.getFarm().getId().equals(farm.getId())) {
+                throw new AccessDeniedException("Trigger device không thuộc farm này");
+            }
+        }
+
+        existing.setFarm(farm);
+        existing.setRuleName(request.getRuleName());
+        existing.setRuleType(request.getRuleType());
+        existing.setTriggerDevice(triggerDevice);
+        existing.setOperator(request.getOperator());
+        existing.setThresholdValue(request.getThresholdValue());
+        existing.setCronExpression(request.getCronExpression());
+        existing.setActionDevice(actionDevice);
+        existing.setActionCommand(request.getActionCommand());
+
+        return mapToResponse(ruleRepository.save(existing));
     }
 
     private RuleResponse mapToResponse(Rule rule) {

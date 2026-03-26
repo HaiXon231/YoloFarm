@@ -13,6 +13,9 @@ import java.util.UUID;
 public interface RuleRepository extends JpaRepository<Rule, UUID> {
     List<Rule> findByTriggerDeviceIdAndIsActiveTrue(UUID triggerDeviceId);
     List<Rule> findByFarmId(UUID farmId);
+    List<Rule> findByFarmIdAndFarmOwnerId(UUID farmId, UUID ownerId);
+    java.util.Optional<Rule> findByIdAndFarmOwnerId(UUID ruleId, UUID ownerId);
+    long countByFarmId(UUID farmId);
 
     /**
      * Lấy active rules kèm Farm + ActionDevice (JOIN FETCH) để tránh N+1 queries

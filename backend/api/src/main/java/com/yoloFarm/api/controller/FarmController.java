@@ -11,9 +11,9 @@ import com.yoloFarm.api.service.AiAnalysisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
 
 import java.util.UUID;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/farms")
@@ -36,44 +36,45 @@ public class FarmController {
     }
 
     @GetMapping("/{farmId}")
-    public ResponseEntity<?> getFarmDetails(@PathVariable("farmId") UUID farmId) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body(Map.of("message", "Chức năng đang phát triển"));
+    public ResponseEntity<?> getFarmDetails(@AuthenticationPrincipal User currentUser, @PathVariable("farmId") UUID farmId) {
+        return ResponseEntity.ok(farmService.getFarmById(farmId, currentUser.getId()));
     }
 
     @PutMapping("/{farmId}")
-    public ResponseEntity<?> updateFarm(@PathVariable("farmId") UUID farmId, @RequestBody FarmCreateRequest request) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body(Map.of("message", "Chức năng đang phát triển"));
+    public ResponseEntity<?> updateFarm(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable("farmId") UUID farmId,
+            @Valid @RequestBody FarmCreateRequest request
+    ) {
+        return ResponseEntity.ok(farmService.updateFarm(farmId, currentUser.getId(), request));
     }
 
     @DeleteMapping("/{farmId}")
-    public ResponseEntity<?> deleteFarm(@PathVariable("farmId") UUID farmId) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body(Map.of("message", "Chức năng đang phát triển"));
+    public ResponseEntity<?> deleteFarm(@AuthenticationPrincipal User currentUser, @PathVariable("farmId") UUID farmId) {
+        farmService.deleteFarm(farmId, currentUser.getId());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{farmId}/devices")
-    public ResponseEntity<?> getFarmDevices(@PathVariable("farmId") UUID farmId) {
-        return ResponseEntity.ok(deviceService.getDevicesByFarmId(farmId));
+    public ResponseEntity<?> getFarmDevices(@AuthenticationPrincipal User currentUser, @PathVariable("farmId") UUID farmId) {
+        return ResponseEntity.ok(deviceService.getDevicesByFarmId(farmId, currentUser.getId()));
     }
 
     @GetMapping("/{farmId}/rules")
-    public ResponseEntity<?> getFarmRules(@PathVariable("farmId") UUID farmId) {
-        return ResponseEntity.ok(ruleService.getRulesByFarmId(farmId));
+    public ResponseEntity<?> getFarmRules(@AuthenticationPrincipal User currentUser, @PathVariable("farmId") UUID farmId) {
+        return ResponseEntity.ok(ruleService.getRulesByFarmId(farmId, currentUser.getId()));
     }
 
     @PostMapping("/{farmId}/ai-analysis")
-    public ResponseEntity<?> analyzeAi(@PathVariable("farmId") UUID farmId,
+    public ResponseEntity<?> analyzeAi(@AuthenticationPrincipal User currentUser,
+                                       @PathVariable("farmId") UUID farmId,
                                        @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
                                        @RequestParam("analysis_type") String analysisType) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body(Map.of("message", "Chức năng đang phát triển"));
+        return ResponseEntity.ok(aiAnalysisService.analyzeImage(currentUser.getId(), farmId, file, analysisType));
     }
 
     @GetMapping("/{farmId}/ai-logs")
-    public ResponseEntity<?> getAiLogs(@PathVariable("farmId") UUID farmId) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body(Map.of("message", "Chức năng đang phát triển"));
+    public ResponseEntity<?> getAiLogs(@AuthenticationPrincipal User currentUser, @PathVariable("farmId") UUID farmId) {
+        return ResponseEntity.ok(aiAnalysisService.getLogs(currentUser.getId(), farmId));
     }
 }

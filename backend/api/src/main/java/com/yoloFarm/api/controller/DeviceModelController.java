@@ -13,6 +13,6 @@ public class DeviceModelController {
 
     @GetMapping
     public ResponseEntity<?> getDeviceModels() {
-        return ResponseEntity.ok(null);
+        return ResponseEntity.ok(deviceModelService.getDeviceModels());
     }
 }

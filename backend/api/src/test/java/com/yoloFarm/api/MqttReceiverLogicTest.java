@@ -59,7 +59,7 @@ public class MqttReceiverLogicTest {
         mockDevice.setFarm(mockFarm);
         
         // Mock DB: Khi tìm kiếm bằng "temp-feed" thì trả về mockDevice
-        when(mockDeviceRepo.findByAdafruitFeedKey("temp-feed")).thenReturn(Optional.of(mockDevice));
+        when(mockDeviceRepo.findByAdafruitFeedKeyWithModelAndFarm("temp-feed")).thenReturn(Optional.of(mockDevice));
 
         // [THỰC THI] - Giả lập Adafruit IO đẩy bản tin
         MqttMessage mqttMsg = new MqttMessage("37.5".getBytes());

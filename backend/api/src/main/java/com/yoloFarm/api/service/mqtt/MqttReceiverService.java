@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 @Slf4j
@@ -28,6 +29,7 @@ public class MqttReceiverService implements Subject {
     
     private final IMqttClient mqttClient;
     private final DeviceRepository deviceRepository;
+    private final AtomicBoolean subscribed = new AtomicBoolean(false);
 
     @Value("${adafruit.mqtt.username}")
     private String username;
@@ -38,11 +40,22 @@ public class MqttReceiverService implements Subject {
             injectedObservers.forEach(this::attach);
             log.info("MqttReceiver: Tự động attach {} observers", injectedObservers.size());
         }
+    }
 
+    public void subscribeIfConnected() {
+        if (subscribed.get()) {
+            return;
+        }
         try {
+            if (!mqttClient.isConnected()) {
+                log.warn("MqttReceiver: MQTT client chưa kết nối, tạm hoãn subscribe.");
+                return;
+            }
+
             // Subscribe wildcard bắt mọi luồng feed của tài khoản Adafruit này
             String wildcardTopic = username + "/feeds/+";
             mqttClient.subscribe(wildcardTopic, this::messageArrived);
+            subscribed.set(true);
             log.info("MqttReceiver: Đã Subscribe thành công topic: [{}]", wildcardTopic);
         } catch (Exception e) {
             log.error("MqttReceiver: Không thể Subscribe topic Adafruit", e);

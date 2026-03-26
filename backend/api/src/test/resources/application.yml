@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:yolofarm_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
+jwt:
+  secret-key: YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYQ==
+  expiration: 86400000
+
+adafruit:
+  mqtt:
+    broker-url: tcp://localhost:1883
+    client-id: YoloFarm_test_client
+    username: test-user
+    password: test-key

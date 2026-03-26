@@ -24,7 +24,7 @@ public class TelemetryData {
     @Column(name = "metric_type", nullable = false, length = 50)
     private String metricType;
 
-    @Column(nullable = false)
+    @Column(name = "value", nullable = false)
     private Float value;
 
     @Column(name = "created_at", nullable = false)
