@@ -6,6 +6,7 @@ import org.eclipse.paho.client.mqttv3.IMqttClient;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -34,15 +35,14 @@ public class MqttConfig {
 
     public MqttConfig(
             ObjectProvider<IMqttClient> mqttClientProvider,
-            ObjectProvider<MqttReceiverService> mqttReceiverServiceProvider
-    ) {
+            ObjectProvider<MqttReceiverService> mqttReceiverServiceProvider) {
         this.mqttClientProvider = mqttClientProvider;
         this.mqttReceiverServiceProvider = mqttReceiverServiceProvider;
     }
 
     @Bean(destroyMethod = "disconnectForcibly")
     public IMqttClient mqttClient() throws MqttException {
-        return new MqttClient(brokerUrl, clientId);
+        return new MqttClient(brokerUrl, clientId, new MemoryPersistence());
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -57,7 +57,7 @@ public class MqttConfig {
             options.setUserName(username);
             options.setPassword(password.toCharArray());
             options.setCleanSession(true);
-            options.setAutomaticReconnect(true);  // Tự kết nối lại khi mất kết nối
+            options.setAutomaticReconnect(true); // Tự kết nối lại khi mất kết nối
 
             mqttClient.connect(options);
             log.info("MqttConfig: Kết nối thành công tới Adafruit IO MQTT Broker!");

@@ -43,12 +43,16 @@ public class AdminController {
     }
 
     @PostMapping("/devices/{deviceId}/approve")
-    public ResponseEntity<?> approveDevice(@PathVariable("deviceId") UUID deviceId, @RequestBody Map<String, String> request) {
-        return ResponseEntity.ok(deviceService.approveDevice(deviceId, request.get("adafruit_feed_key")));
+    public ResponseEntity<?> approveDevice(
+            @PathVariable("deviceId") UUID deviceId,
+            @RequestBody(required = false) Map<String, String> request) {
+        String adafruitFeedKey = (request == null) ? null : request.get("adafruit_feed_key");
+        return ResponseEntity.ok(deviceService.approveDevice(deviceId, adafruitFeedKey));
     }
 
     @PostMapping("/devices/{deviceId}/reject")
-    public ResponseEntity<?> rejectDevice(@PathVariable("deviceId") UUID deviceId, @RequestBody Map<String, String> request) {
+    public ResponseEntity<?> rejectDevice(@PathVariable("deviceId") UUID deviceId,
+            @RequestBody Map<String, String> request) {
         deviceService.rejectDevice(deviceId, request.get("reject_reason"));
         return ResponseEntity.ok(Map.of("message", "Đã từ chối yêu cầu và gửi thông báo cho Nông dân."));
     }

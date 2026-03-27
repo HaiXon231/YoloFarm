@@ -35,3 +35,6 @@ build/
 ### Local env ###
 .env
 .env.local
+
+### Generated MQTT persistence ###
+YoloFarm_*/

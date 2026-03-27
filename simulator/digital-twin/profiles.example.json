@@ -1,0 +1,46 @@
+{
+  "defaults": {
+    "interval_ms": 2000,
+    "pattern": "random_walk",
+    "step": 1.0,
+    "min": 0,
+    "max": 100,
+    "noise": 0.3
+  },
+  "metrics": {
+    "TEMP": {
+      "min": 20,
+      "max": 35,
+      "step": 0.4,
+      "interval_ms": 3000
+    },
+    "HUMIDITY": {
+      "min": 45,
+      "max": 80,
+      "step": 1.0,
+      "interval_ms": 3000
+    },
+    "SOIL_MOISTURE": {
+      "min": 20,
+      "max": 70,
+      "step": 1.5,
+      "interval_ms": 2000
+    },
+    "LIGHT": {
+      "pattern": "sine",
+      "min": 100,
+      "max": 900,
+      "interval_ms": 1500
+    },
+    "PUMP": {
+      "pattern": "actuator_state",
+      "interval_ms": 2000
+    }
+  },
+  "devices": {
+    "feed:demo-pump-01": {
+      "pattern": "actuator_state",
+      "interval_ms": 1000
+    }
+  }
+}

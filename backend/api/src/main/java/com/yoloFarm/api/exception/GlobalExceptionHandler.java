@@ -2,6 +2,7 @@ package com.yoloFarm.api.exception;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -9,6 +10,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -54,6 +56,19 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleIllegalState(IllegalStateException ex) {
         return ResponseEntity.badRequest()
                 .body(Map.of("code", 400, "message", "Trạng thái không hợp lệ", "details", ex.getMessage()));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<?> handleUnreadableJson(HttpMessageNotReadableException ex) {
+        return ResponseEntity.badRequest()
+                .body(Map.of("code", 400, "message", "Body JSON không hợp lệ hoặc đang rỗng"));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<?> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("code", 409, "message", "Xung đột dữ liệu", "details",
+                        "Kiểm tra dữ liệu trùng lặp hoặc ràng buộc khóa duy nhất"));
     }
 
     @ExceptionHandler(Exception.class)
