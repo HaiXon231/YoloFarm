@@ -30,6 +30,7 @@ public class DeviceService {
     private final FarmRepository farmRepository;
     private final DeviceModelRepository deviceModelRepository;
     private final NotificationService notificationService;
+    private final AdafruitApiService adafruitApiService;
 
     public List<DeviceResponse> getDevicesByFarmId(UUID farmId, UUID ownerId) {
         if (!farmRepository.existsByIdAndOwnerId(farmId, ownerId)) {
@@ -116,6 +117,9 @@ public class DeviceService {
         String resolvedFeedKey = (adafruitFeedKey == null || adafruitFeedKey.isBlank())
             ? generateAutoFeedKey(device)
             : normalizeFeedKey(adafruitFeedKey);
+
+        // Khởi tạo Feed thực tế trên thư viện Adafruit IO thông qua REST API
+        adafruitApiService.createFeed(resolvedFeedKey, device.getName());
 
         device.setAdafruitFeedKey(resolvedFeedKey);
         device.setStatus(DeviceStatusEnum.ACTIVE);
