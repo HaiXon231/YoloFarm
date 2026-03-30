@@ -98,7 +98,12 @@ public class MqttReceiverService implements Subject {
             if (deviceOpt.isPresent()) {
                 Device device = deviceOpt.get();
                 // Ép chuỗi raw data Adafruit sang con số thập phân
-                Float metricValue = Float.parseFloat(payload);
+                Float metricValue = Float.parseFloat(payload);                
+                // Cập nhật trạng thái kết nối và lastSeen của thiết bị
+                device.setConnectionStatus(com.yoloFarm.api.enums.ConnectionStatusEnum.ONLINE);
+                device.setLastSeen(java.time.LocalDateTime.now());
+                deviceRepository.save(device);
+
                 // Dùng getMetricType() thay vì getDeviceType() để lấy đúng loại metric
                 String metricType = device.getModel().getMetricType().name();
 

@@ -28,7 +28,7 @@ export default function SensorCard({ device, realtimeValue, isFlashing }: Sensor
   const icon = metricIcons[device.metric_type || ''] || 'sensors'
   const label = metricLabels[device.metric_type || ''] || 'Cảm biến'
   const unit = metricUnits[device.metric_type || ''] || ''
-  const isOnline = device.connection_status === 'ONLINE'
+  const isOnline = device.connection_status === 'ONLINE' || realtimeValue !== undefined
   const value = realtimeValue?.value
 
   return (

@@ -15,19 +15,24 @@ interface OverviewTabProps {
 export default function OverviewTab({ farmId, devices, deviceModels, onDevicesChange }: OverviewTabProps) {
   const [isAddDeviceOpen, setIsAddDeviceOpen] = useState(false)
   const [realtimeValues, setRealtimeValues] = useState<Record<string, { value: number; timestamp: string }>>({})
+  const [activeInSession, setActiveInSession] = useState<Set<string>>(new Set())
   const [flashDeviceId, setFlashDeviceId] = useState<string | null>(null)
   const [wsConnected, setWsConnected] = useState(false)
 
   const sensors = devices.filter((d) => d.device_type === 'SENSOR' && d.status === 'ACTIVE')
   const actuators = devices.filter((d) => d.device_type === 'ACTUATOR' && d.status === 'ACTIVE')
   const pendingDevices = devices.filter((d) => d.status === 'PENDING')
-  const onlineCount = devices.filter((d) => d.connection_status === 'ONLINE' && d.status === 'ACTIVE').length
+  
+  const onlineCount = devices.filter((d) => 
+    d.status === 'ACTIVE' && (d.connection_status === 'ONLINE' || activeInSession.has(d.id))
+  ).length
 
   const handleTelemetry = useCallback((data: TelemetryMessage) => {
     setRealtimeValues((prev) => ({
       ...prev,
       [data.deviceId]: { value: data.value, timestamp: data.timestamp },
     }))
+    setActiveInSession((prev) => new Set(prev).add(data.deviceId))
     setFlashDeviceId(data.deviceId)
     setTimeout(() => setFlashDeviceId(null), 600)
   }, [])
