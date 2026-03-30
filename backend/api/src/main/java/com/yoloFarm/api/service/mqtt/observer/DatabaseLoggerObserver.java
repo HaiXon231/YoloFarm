@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Component
 @Slf4j
@@ -23,7 +24,7 @@ public class DatabaseLoggerObserver implements Observer {
                     .deviceId(data.deviceId())
                     .metricType(data.metricType())
                     .value(data.value())
-                    .createdAt(LocalDateTime.now())
+                    .createdAt(LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")))
                     .build();
             telemetryDataRepository.save(telemetry);
             log.info("DatabaseLoggerObserver: Đã lưu TelemetryData thành công cho Device {}", data.deviceId());

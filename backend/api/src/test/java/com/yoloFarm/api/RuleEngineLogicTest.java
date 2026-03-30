@@ -8,6 +8,7 @@ import com.yoloFarm.api.enums.ActionCommandEnum;
 import com.yoloFarm.api.enums.OperatingModeEnum;
 import com.yoloFarm.api.repository.DeviceRepository;
 import com.yoloFarm.api.repository.RuleRepository;
+import com.yoloFarm.api.service.NotificationService;
 import com.yoloFarm.api.service.mqtt.MqttSenderService;
 import com.yoloFarm.api.service.mqtt.observer.RuleEngineObserver;
 import com.yoloFarm.api.service.strategy.AutoThresholdStrategy;
@@ -38,6 +39,9 @@ public class RuleEngineLogicTest {
     @Mock
     private MqttSenderService mqttSenderService;
 
+    @Mock
+    private NotificationService notificationService;
+
     private IrrigationContext irrigationContext;
     private AutoThresholdStrategy autoThresholdStrategy;
     private RuleEngineObserver ruleEngineObserver;
@@ -47,7 +51,7 @@ public class RuleEngineLogicTest {
         // 1. Tự tay lắp ráp các hạt nhân Logic (Không cần chạy nguyên cả Server Spring Boot nặng nề)
         autoThresholdStrategy = new AutoThresholdStrategy(deviceRepository, mqttSenderService);
         irrigationContext = new IrrigationContext();
-        ruleEngineObserver = new RuleEngineObserver(ruleRepository, irrigationContext, autoThresholdStrategy);
+        ruleEngineObserver = new RuleEngineObserver(ruleRepository, irrigationContext, autoThresholdStrategy, notificationService);
     }
 
     @Test

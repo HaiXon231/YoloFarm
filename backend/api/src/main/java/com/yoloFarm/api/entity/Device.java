@@ -45,4 +45,7 @@ public class Device {
 
     @Enumerated(EnumType.STRING)
     private OperatingModeEnum operatingMode;
+
+    @Builder.Default
+    private Boolean isActive = false;
 }

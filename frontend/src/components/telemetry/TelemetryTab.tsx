@@ -32,11 +32,16 @@ export default function TelemetryTab({ devices }: TelemetryTabProps) {
     }
     setIsLoading(true)
     setHasQueried(true)
+    const formatDate = (dateStr: string) => {
+      // Chuyển sang định dạng ISO Local (yyyy-MM-ddTHH:mm:ss) cho Backend
+      return format(new Date(dateStr), "yyyy-MM-dd'T'HH:mm:ss")
+    }
+
     try {
       const res = await api.get<TelemetryDataPoint[]>(`/devices/${selectedDeviceId}/telemetry`, {
         params: {
-          start_time: new Date(startTime).toISOString(),
-          end_time: new Date(endTime).toISOString(),
+          start_time: formatDate(startTime),
+          end_time: formatDate(endTime),
           aggregate,
         },
       })

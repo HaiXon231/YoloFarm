@@ -39,6 +39,10 @@ public class ManualStrategy implements IrrigationStrategy {
         }
         
         mqttSenderService.sendCommand(adafruitFeedKey, command);
+        
+        // Cập nhật trạng thái isActive vào Database để UI đồng bộ
+        device.setIsActive("ON".equalsIgnoreCase(command));
+        deviceRepository.save(device);
 
         // Bước 2d: Xác nhận thành công
         log.info("Đã gửi lệnh {} thành công bằng chế độ MANUAL cho thiết bị {}", command, deviceId);

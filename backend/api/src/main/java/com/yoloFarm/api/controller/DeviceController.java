@@ -15,7 +15,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.HttpStatus;
-import java.time.OffsetDateTime;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.Map;
 
@@ -58,12 +59,10 @@ public class DeviceController {
     public ResponseEntity<?> getTelemetry(
             @AuthenticationPrincipal User currentUser,
             @PathVariable("deviceId") UUID deviceId,
-            @RequestParam("start_time") String startTime,
-            @RequestParam("end_time") String endTime,
+            @RequestParam("start_time") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam("end_time") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,
             @RequestParam(value = "aggregate", required = false) String aggregate) {
-        OffsetDateTime start = OffsetDateTime.parse(startTime);
-        OffsetDateTime end = OffsetDateTime.parse(endTime);
-        return ResponseEntity.ok(telemetryService.getTelemetry(currentUser.getId(), deviceId, start.toLocalDateTime(), end.toLocalDateTime(), aggregate));
+        return ResponseEntity.ok(telemetryService.getTelemetry(currentUser.getId(), deviceId, start, end, aggregate));
     }
 
     @PostMapping("/{deviceId}/command")

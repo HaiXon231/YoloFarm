@@ -3,6 +3,7 @@ package com.yoloFarm.api.service.mqtt.observer;
 import com.yoloFarm.api.dto.SensorData;
 import com.yoloFarm.api.entity.Rule;
 import com.yoloFarm.api.repository.RuleRepository;
+import com.yoloFarm.api.service.NotificationService;
 import com.yoloFarm.api.service.strategy.AutoThresholdStrategy;
 import com.yoloFarm.api.service.strategy.IrrigationContext;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class RuleEngineObserver implements Observer {
     private final RuleRepository ruleRepository;
     private final IrrigationContext irrigationContext;
     private final AutoThresholdStrategy autoThresholdStrategy;
+    private final NotificationService notificationService;
 
     @Override
     public void update(SensorData data) {
@@ -41,6 +43,16 @@ public class RuleEngineObserver implements Observer {
                         rule.getActionDevice().getId(),
                         rule.getActionCommand().name()
                 );
+
+                // Gửi thông báo hệ thống cho Nông dân
+                String msg = String.format("Hệ thống tự động: Đã %s [%s] do %s (%s %s %s)", 
+                        rule.getActionCommand().name(),
+                        rule.getActionDevice().getName(),
+                        data.metricType(),
+                        data.value(),
+                        rule.getOperator(),
+                        rule.getThresholdValue());
+                notificationService.createSystemNotification(rule.getFarm().getOwner().getId(), msg);
             }
         }
     }

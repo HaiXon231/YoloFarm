@@ -178,7 +178,7 @@ public class DeviceService {
         response.setConnectionStatus(device.getConnectionStatus());
         response.setLastSeen(device.getLastSeen());
         response.setOperatingMode(device.getOperatingMode());
-        response.setIsActive(device.getStatus() == DeviceStatusEnum.ACTIVE);
+        response.setIsActive(device.getIsActive());
         return response;
     }
 }
