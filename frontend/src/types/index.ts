@@ -138,7 +138,7 @@ export interface TelemetryDataPoint {
   value: number
 }
 
-export type AggregateInterval = '15m' | '1h' | '1d'
+export type AggregateInterval = '15m' | '1h' | '1d' | ''
 
 // ============================================
 // NOTIFICATION DTOs

@@ -8,7 +8,6 @@ import com.yoloFarm.api.dto.request.DeviceRequest;
 import com.yoloFarm.api.entity.User;
 import com.yoloFarm.api.service.DeviceService;
 import com.yoloFarm.api.service.TelemetryService;
-import com.yoloFarm.api.service.ControlService;
 import com.yoloFarm.api.service.strategy.IrrigationContext;
 import com.yoloFarm.api.service.strategy.ManualStrategy;
 import jakarta.validation.Valid;

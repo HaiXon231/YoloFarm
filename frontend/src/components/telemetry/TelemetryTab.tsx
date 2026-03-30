@@ -103,6 +103,7 @@ export default function TelemetryTab({ devices }: TelemetryTabProps) {
               onChange={(e) => setAggregate(e.target.value as AggregateInterval)}
               className="input-field"
             >
+              <option value="">Mặc định (Tất cả)</option>
               <option value="15m">15 phút</option>
               <option value="1h">1 giờ</option>
               <option value="1d">1 ngày</option>
