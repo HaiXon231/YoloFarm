@@ -25,7 +25,6 @@ import java.util.Map;
 public class DeviceController {
     private final DeviceService deviceService;
     private final TelemetryService telemetryService;
-    private final ControlService controlService;
     private final IrrigationContext irrigationContext;
     private final ManualStrategy manualStrategy;
 

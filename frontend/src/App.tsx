@@ -51,7 +51,6 @@ export default function App() {
           },
         }}
       />
-
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
