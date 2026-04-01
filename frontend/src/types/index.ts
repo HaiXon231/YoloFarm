@@ -98,6 +98,35 @@ export interface AdminStatsResponse {
   active_devices: number
 }
 
+export interface AdminFarmerResponse {
+  id: string
+  username: string
+  email: string
+  created_at: string
+  farm_count: number
+}
+
+export interface AdminFarmResponse {
+  id: string
+  name: string
+  location: string | null
+  owner_name: string
+  owner_email: string
+  created_at: string
+  device_count: number
+}
+
+export interface AdminDeviceResponse {
+  id: string
+  name: string
+  model_name: string
+  status: DeviceStatus
+  farm_name: string
+  owner_name: string
+  connection_status: ConnectionStatus
+  is_active: boolean
+}
+
 // Enriched device with model info (frontend convenience)
 export interface DeviceWithModel extends DeviceResponse {
   device_type?: DeviceType

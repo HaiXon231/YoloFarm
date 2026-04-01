@@ -16,10 +16,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import java.util.UUID;
 import java.util.Map;
+import java.util.List;
+import java.util.stream.Collectors;
+import com.yoloFarm.api.dto.response.*;
 
 @RestController
 @RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor
+@org.springframework.transaction.annotation.Transactional(readOnly = true)
 public class AdminController {
     private final DeviceModelService deviceModelService;
     private final DeviceService deviceService;
@@ -37,6 +41,53 @@ public class AdminController {
                 .activeDevices(deviceRepository.countByStatus(DeviceStatusEnum.ACTIVE))
                 .build();
         return ResponseEntity.ok(stats);
+    }
+
+    @GetMapping("/farmers")
+    public ResponseEntity<List<AdminFarmerResponse>> getFarmers() {
+        List<AdminFarmerResponse> farmers = userRepository.findByRole(RoleEnum.FARMER).stream()
+                .map(u -> AdminFarmerResponse.builder()
+                        .id(u.getId())
+                        .username(u.getUsername())
+                        .email(u.getEmail())
+                        .createdAt(u.getCreatedAt())
+                        .farmCount(u.getFarms() != null ? u.getFarms().size() : 0)
+                        .build())
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(farmers);
+    }
+
+    @GetMapping("/farms")
+    public ResponseEntity<List<AdminFarmResponse>> getFarms() {
+        List<AdminFarmResponse> farms = farmRepository.findAll().stream()
+                .map(f -> AdminFarmResponse.builder()
+                        .id(f.getId())
+                        .name(f.getName())
+                        .location(f.getLocation())
+                        .ownerName(f.getOwner().getUsername())
+                        .ownerEmail(f.getOwner().getEmail())
+                        .createdAt(f.getCreatedAt())
+                        .deviceCount(f.getDevices() != null ? f.getDevices().size() : 0)
+                        .build())
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(farms);
+    }
+
+    @GetMapping("/devices")
+    public ResponseEntity<List<AdminDeviceResponse>> getDevices() {
+        List<AdminDeviceResponse> devices = deviceRepository.findAll().stream()
+                .map(d -> AdminDeviceResponse.builder()
+                        .id(d.getId())
+                        .name(d.getName())
+                        .modelName(d.getModel().getModelName())
+                        .status(d.getStatus())
+                        .farmName(d.getFarm().getName())
+                        .ownerName(d.getFarm().getOwner().getUsername())
+                        .connectionStatus(d.getConnectionStatus())
+                        .isActive(Boolean.TRUE.equals(d.getIsActive()))
+                        .build())
+                .collect(Collectors.<AdminDeviceResponse>toList());
+        return ResponseEntity.ok(devices);
     }
 
     @PostMapping("/device-models")
