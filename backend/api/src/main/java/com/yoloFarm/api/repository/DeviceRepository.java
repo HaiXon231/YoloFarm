@@ -17,6 +17,7 @@ public interface DeviceRepository extends JpaRepository<Device, UUID> {
     java.util.Optional<Device> findByIdAndFarmOwnerId(UUID deviceId, UUID ownerId);
     long countByFarmId(UUID farmId);
     List<Device> findByStatus(DeviceStatusEnum status);
+    long countByStatus(DeviceStatusEnum status);
     java.util.Optional<Device> findByAdafruitFeedKey(String adafruitFeedKey);
 
     /**

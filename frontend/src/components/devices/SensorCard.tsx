@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import type { DeviceWithModel } from '@/types'
+import RenameDeviceModal from './RenameDeviceModal'
 
 interface SensorCardProps {
   device: DeviceWithModel
   realtimeValue?: { value: number; timestamp: string }
   isFlashing: boolean
+  onRenameSuccess?: () => void
 }
 
 const metricIcons: Record<string, string> = {
@@ -24,7 +27,8 @@ const metricUnits: Record<string, string> = {
   SOIL_MOISTURE: '%',
 }
 
-export default function SensorCard({ device, realtimeValue, isFlashing }: SensorCardProps) {
+export default function SensorCard({ device, realtimeValue, isFlashing, onRenameSuccess }: SensorCardProps) {
+  const [isRenameOpen, setIsRenameOpen] = useState(false)
   const icon = metricIcons[device.metric_type || ''] || 'sensors'
   const label = metricLabels[device.metric_type || ''] || 'Cảm biến'
   const unit = metricUnits[device.metric_type || ''] || ''
@@ -54,11 +58,31 @@ export default function SensorCard({ device, realtimeValue, isFlashing }: Sensor
       </div>
 
       <div className="flex items-center justify-between mt-3">
-        <p className="text-xs text-on-surface-variant truncate mr-3">{device.name}</p>
+        <div className="flex items-center gap-1 group/name">
+          <p className="text-xs text-on-surface-variant truncate max-w-[120px]">{device.name}</p>
+          <button 
+            onClick={() => setIsRenameOpen(true)}
+            className="p-1 rounded-md hover:bg-surface-container opacity-0 group-hover/name:opacity-100 transition-all"
+            title="Đổi tên"
+          >
+            <span className="material-symbols-outlined text-xs text-on-surface-variant">edit</span>
+          </button>
+        </div>
         <span className={isOnline ? 'badge-online' : 'badge-offline'}>
           {isOnline ? 'Online' : 'Offline'}
         </span>
       </div>
+
+      <RenameDeviceModal 
+        isOpen={isRenameOpen}
+        onClose={() => setIsRenameOpen(false)}
+        deviceId={device.id}
+        currentName={device.name}
+        onSuccess={() => {
+          setIsRenameOpen(false)
+          onRenameSuccess?.()
+        }}
+      />
 
       {/* Mini sparkline bar */}
       {value !== undefined && (

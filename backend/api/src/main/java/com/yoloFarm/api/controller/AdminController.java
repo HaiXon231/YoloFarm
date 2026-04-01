@@ -1,6 +1,11 @@
 package com.yoloFarm.api.controller;
 
+import com.yoloFarm.api.dto.response.AdminStatsResponse;
 import com.yoloFarm.api.enums.DeviceStatusEnum;
+import com.yoloFarm.api.enums.RoleEnum;
+import com.yoloFarm.api.repository.FarmRepository;
+import com.yoloFarm.api.repository.UserRepository;
+import com.yoloFarm.api.repository.DeviceRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.yoloFarm.api.dto.request.DeviceModelRequest;
@@ -18,6 +23,21 @@ import java.util.Map;
 public class AdminController {
     private final DeviceModelService deviceModelService;
     private final DeviceService deviceService;
+    private final UserRepository userRepository;
+    private final FarmRepository farmRepository;
+    private final DeviceRepository deviceRepository;
+
+    @GetMapping("/stats")
+    public ResponseEntity<AdminStatsResponse> getStats() {
+        AdminStatsResponse stats = AdminStatsResponse.builder()
+                .totalFarmers(userRepository.countByRole(RoleEnum.FARMER))
+                .totalFarms(farmRepository.count())
+                .totalDevices(deviceRepository.count())
+                .pendingRequests(deviceRepository.countByStatus(DeviceStatusEnum.PENDING))
+                .activeDevices(deviceRepository.countByStatus(DeviceStatusEnum.ACTIVE))
+                .build();
+        return ResponseEntity.ok(stats);
+    }
 
     @PostMapping("/device-models")
     public ResponseEntity<?> createDeviceModel(@Valid @RequestBody DeviceModelRequest request) {

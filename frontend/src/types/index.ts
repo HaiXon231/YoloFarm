@@ -90,6 +90,14 @@ export interface DeviceResponse {
   is_active: boolean
 }
 
+export interface AdminStatsResponse {
+  total_farmers: number
+  total_farms: number
+  total_devices: number
+  pending_requests: number
+  active_devices: number
+}
+
 // Enriched device with model info (frontend convenience)
 export interface DeviceWithModel extends DeviceResponse {
   device_type?: DeviceType

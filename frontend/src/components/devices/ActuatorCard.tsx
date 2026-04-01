@@ -2,6 +2,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api, { getApiErrorMessage } from '@/lib/axios'
 import type { DeviceWithModel } from '@/types'
+import RenameDeviceModal from './RenameDeviceModal'
 
 interface ActuatorCardProps {
   device: DeviceWithModel
@@ -13,6 +14,7 @@ export default function ActuatorCard({ device, onUpdate }: ActuatorCardProps) {
   const [isCommandLoading, setIsCommandLoading] = useState(false)
   const [localMode, setLocalMode] = useState(device.operating_mode)
   const [isOn, setIsOn] = useState(device.is_active)
+  const [isRenameOpen, setIsRenameOpen] = useState(false)
 
   const isOnline = device.connection_status === 'ONLINE'
   const isAuto = localMode === 'AUTO'
@@ -62,7 +64,16 @@ export default function ActuatorCard({ device, onUpdate }: ActuatorCardProps) {
             </span>
           </div>
           <div>
-            <p className="font-bold text-on-surface">{device.name}</p>
+            <div className="flex items-center gap-1 group/name">
+              <p className="font-bold text-on-surface truncate max-w-[140px]">{device.name}</p>
+              <button 
+                onClick={() => setIsRenameOpen(true)}
+                className="p-1 rounded-md hover:bg-surface-container opacity-0 group-hover/name:opacity-100 transition-all"
+                title="Đổi tên"
+              >
+                <span className="material-symbols-outlined text-xs text-on-surface-variant">edit</span>
+              </button>
+            </div>
             <div className="flex items-center gap-2 mt-0.5">
               <span className={isOnline ? 'badge-online' : 'badge-offline'}>
                 {isOnline ? 'Online' : 'Offline'}
@@ -131,6 +142,17 @@ export default function ActuatorCard({ device, onUpdate }: ActuatorCardProps) {
           TẮT
         </button>
       </div>
+
+      <RenameDeviceModal 
+        isOpen={isRenameOpen}
+        onClose={() => setIsRenameOpen(false)}
+        deviceId={device.id}
+        currentName={device.name}
+        onSuccess={() => {
+          setIsRenameOpen(false)
+          onUpdate()
+        }}
+      />
     </div>
   )
 }

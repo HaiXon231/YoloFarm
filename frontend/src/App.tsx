@@ -13,6 +13,7 @@ import FarmsPage from '@/pages/farmer/FarmsPage'
 import FarmDetailPage from '@/pages/farmer/FarmDetailPage'
 import DeviceRequestsPage from '@/pages/admin/DeviceRequestsPage'
 import DeviceModelsPage from '@/pages/admin/DeviceModelsPage'
+import AdminDashboardPage from '@/pages/admin/AdminDashboardPage'
 
 export default function App() {
   const { loadFromStorage, fetchProfile, isAuthenticated } = useAuthStore()
@@ -63,6 +64,7 @@ export default function App() {
           <Route path="/farms/:farmId" element={<ProtectedRoute requiredRole="FARMER"><FarmDetailPage /></ProtectedRoute>} />
 
           {/* Admin Routes */}
+          <Route path="/admin/dashboard" element={<ProtectedRoute requiredRole="ADMIN"><AdminDashboardPage /></ProtectedRoute>} />
           <Route path="/admin/device-requests" element={<ProtectedRoute requiredRole="ADMIN"><DeviceRequestsPage /></ProtectedRoute>} />
           <Route path="/admin/device-models" element={<ProtectedRoute requiredRole="ADMIN"><DeviceModelsPage /></ProtectedRoute>} />
         </Route>

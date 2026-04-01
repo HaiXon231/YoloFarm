@@ -120,6 +120,7 @@ export default function OverviewTab({ farmId, devices, deviceModels, onDevicesCh
                 device={device}
                 realtimeValue={realtimeValues[device.id]}
                 isFlashing={flashDeviceId === device.id}
+                onRenameSuccess={onDevicesChange}
               />
             ))}
           </div>

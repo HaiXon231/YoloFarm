@@ -6,6 +6,7 @@ const farmerLinks = [
 ]
 
 const adminLinks = [
+  { to: '/admin/dashboard', icon: 'dashboard', label: 'Tổng quan' },
   { to: '/admin/device-requests', icon: 'pending_actions', label: 'Yêu cầu thiết bị' },
   { to: '/admin/device-models', icon: 'inventory_2', label: 'Danh mục thiết bị' },
 ]
