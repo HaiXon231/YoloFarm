@@ -96,6 +96,9 @@ export interface AdminStatsResponse {
   total_devices: number
   pending_requests: number
   active_devices: number
+  api_status: boolean
+  mqtt_status: boolean
+  db_status: boolean
 }
 
 export interface AdminFarmerResponse {

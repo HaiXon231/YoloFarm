@@ -6,6 +6,7 @@ import com.yoloFarm.api.enums.RoleEnum;
 import com.yoloFarm.api.repository.FarmRepository;
 import com.yoloFarm.api.repository.UserRepository;
 import com.yoloFarm.api.repository.DeviceRepository;
+import org.eclipse.paho.client.mqttv3.IMqttClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.yoloFarm.api.dto.request.DeviceModelRequest;
@@ -30,6 +31,7 @@ public class AdminController {
     private final UserRepository userRepository;
     private final FarmRepository farmRepository;
     private final DeviceRepository deviceRepository;
+    private final IMqttClient mqttClient;
 
     @GetMapping("/stats")
     public ResponseEntity<AdminStatsResponse> getStats() {
@@ -39,6 +41,9 @@ public class AdminController {
                 .totalDevices(deviceRepository.count())
                 .pendingRequests(deviceRepository.countByStatus(DeviceStatusEnum.PENDING))
                 .activeDevices(deviceRepository.countByStatus(DeviceStatusEnum.ACTIVE))
+                .apiStatus(true) // If this method is called, API is up
+                .mqttStatus(mqttClient.isConnected())
+                .dbStatus(true) // If counts above succeeded, DB is up
                 .build();
         return ResponseEntity.ok(stats);
     }

@@ -130,4 +130,26 @@
   .animate-flash-green {
     animation: flash-green 0.6s ease-in-out;
   }
+
+  .premium-card {
+    @apply relative overflow-hidden bg-white/80 backdrop-blur-xl 
+           border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.05)]
+           hover:shadow-[0_20px_40px_rgba(0,0,0,0.1)] hover:-translate-y-1 
+           transition-all duration-500 rounded-[2.5rem];
+  }
+
+  .card-accent-emerald { @apply border-l-[8px] border-l-emerald-500; }
+  .card-accent-blue { @apply border-l-[8px] border-l-blue-500; }
+  .card-accent-purple { @apply border-l-[8px] border-l-purple-500; }
+  .card-accent-orange { @apply border-l-[8px] border-l-orange-500; }
+  .card-accent-cyan { @apply border-l-[8px] border-l-cyan-500; }
+
+  @keyframes blob {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+  .animate-blob {
+    animation: blob 8s infinite ease-in-out;
+  }
 }

@@ -15,4 +15,9 @@ public class AdminStatsResponse {
     private long totalDevices;
     private long pendingRequests;
     private long activeDevices;
+    
+    // Infrastructure status
+    private boolean apiStatus;
+    private boolean mqttStatus;
+    private boolean dbStatus;
 }
