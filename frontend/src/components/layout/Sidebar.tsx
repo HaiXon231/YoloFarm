@@ -3,12 +3,14 @@ import { useAuthStore } from '@/stores/authStore'
 
 const farmerLinks = [
   { to: '/farms', icon: 'yard', label: 'Nông trại' },
+  { to: '/profile', icon: 'person', label: 'Hồ sơ' },
 ]
 
 const adminLinks = [
   { to: '/admin/dashboard', icon: 'dashboard', label: 'Tổng quan' },
   { to: '/admin/device-requests', icon: 'pending_actions', label: 'Yêu cầu thiết bị' },
   { to: '/admin/device-models', icon: 'inventory_2', label: 'Danh mục thiết bị' },
+  { to: '/profile', icon: 'person', label: 'Hồ sơ' },
 ]
 
 export default function Sidebar() {
@@ -50,14 +52,16 @@ export default function Sidebar() {
 
       {/* User Section */}
       <div className="mt-auto px-2 pb-2">
-        <div className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors group">
-          <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold text-sm">
-            {user?.username?.charAt(0).toUpperCase() || 'U'}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-white text-sm font-bold truncate">{user?.username || '...'}</p>
-            <p className="text-gray-500 text-xs truncate">{user?.email || ''}</p>
-          </div>
+        <div className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors group relative">
+          <NavLink to="/profile" className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold text-sm shrink-0">
+              {user?.username?.charAt(0).toUpperCase() || 'U'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-bold truncate">{user?.username || '...'}</p>
+              <p className="text-gray-500 text-[10px] truncate">{user?.email || ''}</p>
+            </div>
+          </NavLink>
           <button
             onClick={handleLogout}
             className="p-1.5 rounded-lg hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100"
