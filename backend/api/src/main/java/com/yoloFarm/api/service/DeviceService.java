@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class DeviceService {
 
     private final DeviceRepository deviceRepository;
@@ -32,6 +31,7 @@ public class DeviceService {
     private final NotificationService notificationService;
     private final AdafruitApiService adafruitApiService;
 
+    @Transactional(readOnly = true)
     public List<DeviceResponse> getDevicesByFarmId(UUID farmId, UUID ownerId) {
         if (!farmRepository.existsByIdAndOwnerId(farmId, ownerId)) {
             throw new AccessDeniedException("Bạn không có quyền truy cập danh sách thiết bị của nông trại này");
@@ -77,6 +77,7 @@ public class DeviceService {
         return mapToResponse(device);
     }
 
+    @Transactional(readOnly = true)
     public void assertDeviceOwnership(UUID ownerId, UUID deviceId) {
         if (deviceRepository.findByIdAndFarmOwnerId(deviceId, ownerId).isEmpty()) {
             throw new AccessDeniedException("Bạn không có quyền thao tác thiết bị này");
@@ -99,6 +100,7 @@ public class DeviceService {
         return mapToResponse(deviceRepository.save(device));
     }
 
+    @Transactional(readOnly = true)
     public List<DeviceResponse> getDeviceRequests(String status) {
         List<Device> devices;
         if (status == null || status.isBlank()) {

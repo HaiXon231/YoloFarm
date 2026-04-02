@@ -24,7 +24,6 @@ import com.yoloFarm.api.dto.response.*;
 @RestController
 @RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor
-@org.springframework.transaction.annotation.Transactional(readOnly = true)
 public class AdminController {
     private final DeviceModelService deviceModelService;
     private final DeviceService deviceService;
@@ -34,6 +33,7 @@ public class AdminController {
     private final IMqttClient mqttClient;
 
     @GetMapping("/stats")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<AdminStatsResponse> getStats() {
         AdminStatsResponse stats = AdminStatsResponse.builder()
                 .totalFarmers(userRepository.countByRole(RoleEnum.FARMER))
@@ -49,6 +49,7 @@ public class AdminController {
     }
 
     @GetMapping("/farmers")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<List<AdminFarmerResponse>> getFarmers() {
         List<AdminFarmerResponse> farmers = userRepository.findByRole(RoleEnum.FARMER).stream()
                 .map(u -> AdminFarmerResponse.builder()
@@ -63,6 +64,7 @@ public class AdminController {
     }
 
     @GetMapping("/farms")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<List<AdminFarmResponse>> getFarms() {
         List<AdminFarmResponse> farms = farmRepository.findAll().stream()
                 .map(f -> AdminFarmResponse.builder()
@@ -79,6 +81,7 @@ public class AdminController {
     }
 
     @GetMapping("/devices")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<List<AdminDeviceResponse>> getDevices() {
         List<AdminDeviceResponse> devices = deviceRepository.findAll().stream()
                 .map(d -> AdminDeviceResponse.builder()
@@ -107,6 +110,7 @@ public class AdminController {
     }
 
     @GetMapping("/devices/requests")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<?> getDeviceRequests(@RequestParam(value = "status", required = false) String status) {
         if (status != null && !status.isBlank()) {
             try {
