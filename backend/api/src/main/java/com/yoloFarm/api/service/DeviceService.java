@@ -11,6 +11,7 @@ import com.yoloFarm.api.enums.OperatingModeEnum;
 import com.yoloFarm.api.repository.DeviceModelRepository;
 import com.yoloFarm.api.repository.DeviceRepository;
 import com.yoloFarm.api.repository.FarmRepository;
+import com.yoloFarm.api.repository.RuleRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -28,6 +29,7 @@ public class DeviceService {
     private final DeviceRepository deviceRepository;
     private final FarmRepository farmRepository;
     private final DeviceModelRepository deviceModelRepository;
+    private final RuleRepository ruleRepository;
     private final NotificationService notificationService;
     private final AdafruitApiService adafruitApiService;
 
@@ -96,6 +98,14 @@ public class DeviceService {
     public DeviceResponse changeMode(UUID ownerId, UUID deviceId, OperatingModeEnum mode) {
         Device device = deviceRepository.findByIdAndFarmOwnerId(deviceId, ownerId)
                 .orElseThrow(() -> new EntityNotFoundException("Device not found with id: " + deviceId));
+
+        if (mode == OperatingModeEnum.AUTO) {
+            boolean hasActiveRules = ruleRepository.existsByActionDeviceIdAndIsActiveTrue(deviceId);
+            if (!hasActiveRules) {
+                throw new IllegalStateException("Không thể bật chế độ AUTO: Thiết bị này hiện chưa có luật (Rule) nào đang hoạt động.");
+            }
+        }
+
         device.setOperatingMode(mode);
         return mapToResponse(deviceRepository.save(device));
     }

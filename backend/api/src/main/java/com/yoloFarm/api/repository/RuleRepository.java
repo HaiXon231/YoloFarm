@@ -12,10 +12,12 @@ import java.util.UUID;
 @Repository
 public interface RuleRepository extends JpaRepository<Rule, UUID> {
     List<Rule> findByTriggerDeviceIdAndIsActiveTrue(UUID triggerDeviceId);
+    List<Rule> findByRuleTypeAndIsActiveTrue(com.yoloFarm.api.enums.RuleTypeEnum ruleType);
     List<Rule> findByFarmId(UUID farmId);
     List<Rule> findByFarmIdAndFarmOwnerId(UUID farmId, UUID ownerId);
     java.util.Optional<Rule> findByIdAndFarmOwnerId(UUID ruleId, UUID ownerId);
     long countByFarmId(UUID farmId);
+    boolean existsByActionDeviceIdAndIsActiveTrue(UUID actionDeviceId);
 
     /**
      * Lấy active rules kèm Farm + ActionDevice (JOIN FETCH) để tránh N+1 queries

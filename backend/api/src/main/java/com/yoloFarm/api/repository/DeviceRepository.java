@@ -26,4 +26,8 @@ public interface DeviceRepository extends JpaRepository<Device, UUID> {
      */
     @Query("SELECT d FROM Device d JOIN FETCH d.model JOIN FETCH d.farm WHERE d.adafruitFeedKey = :feedKey")
     java.util.Optional<Device> findByAdafruitFeedKeyWithModelAndFarm(@Param("feedKey") String feedKey);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE Device d SET d.connectionStatus = com.yoloFarm.api.enums.ConnectionStatusEnum.OFFLINE WHERE d.connectionStatus = com.yoloFarm.api.enums.ConnectionStatusEnum.ONLINE AND (d.lastSeen < :threshold OR d.lastSeen IS NULL)")
+    void markStaleDevicesAsOffline(@Param("threshold") java.time.LocalDateTime threshold);
 }
