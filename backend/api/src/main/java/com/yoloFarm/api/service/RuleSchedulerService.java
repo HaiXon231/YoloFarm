@@ -36,9 +36,9 @@ public class RuleSchedulerService {
 
         for (Rule rule : activeScheduledRules) {
             String cron = rule.getCronExpression();
-            if (cron == null || cron.isBlank()) continue;
+            if (cron == null || cron.isBlank())
+                continue;
 
-            // Tự động thêm field Giây (0) nếu Cron chỉ có 5 tham số định dạng chuẩn UNIX
             String[] parts = cron.trim().split("\\s+");
             if (parts.length == 5) {
                 cron = "0 " + cron.trim();
@@ -46,20 +46,19 @@ public class RuleSchedulerService {
 
             try {
                 CronExpression cronExp = CronExpression.parse(cron);
-                // Kiểm tra xem thời điểm hiện tại (cắt phần giây/mili) có khớp với cron không
                 LocalDateTime nextExecution = cronExp.next(now.minusSeconds(1));
                 if (nextExecution != null && nextExecution.isBefore(now.plusSeconds(1))) {
-                    log.info("Rule Schedule Triggered: {} cho thiết bị {}", rule.getRuleName(), rule.getActionDevice().getId());
-                    
+                    log.info("Rule Schedule Triggered: {} cho thiết bị {}", rule.getRuleName(),
+                            rule.getActionDevice().getId());
+
                     boolean success = irrigationContext.executeControl(
                             scheduledStrategy,
                             rule.getFarm().getId(),
                             rule.getActionDevice().getId(),
-                            rule.getActionCommand().name()
-                    );
+                            rule.getActionCommand().name());
 
                     if (success) {
-                        String msg = String.format("Hệ thống tự động (Hẹn giờ): Đã %s [%s] theo luật [%s]", 
+                        String msg = String.format("Hệ thống tự động (Hẹn giờ): Đã %s [%s] theo luật [%s]",
                                 rule.getActionCommand().name(),
                                 rule.getActionDevice().getName(),
                                 rule.getRuleName());

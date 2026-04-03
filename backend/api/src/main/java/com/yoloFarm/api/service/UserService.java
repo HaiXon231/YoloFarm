@@ -32,7 +32,6 @@ public class UserService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng!"));
 
-        // Cập nhật Username nếu có và không trùng
         if (request.getUsername() != null && !request.getUsername().equals(user.getUsername())) {
             if (userRepository.findByUsername(request.getUsername()).isPresent()) {
                 throw new ConflictException("Tên người dùng này đã tồn tại!");
@@ -40,7 +39,6 @@ public class UserService {
             user.setUsername(request.getUsername());
         }
 
-        // Cập nhật Email nếu có và không trùng
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
             if (userRepository.findByEmail(request.getEmail()).isPresent()) {
                 throw new ConflictException("Email này đã được sử dụng!");
@@ -48,7 +46,6 @@ public class UserService {
             user.setEmail(request.getEmail());
         }
 
-        // Đổi mật khẩu nếu có yêu cầu
         if (request.getNewPassword() != null && !request.getNewPassword().isEmpty()) {
             if (request.getCurrentPassword() == null || request.getCurrentPassword().isEmpty()) {
                 throw new IllegalArgumentException("Bạn phải nhập mật khẩu hiện tại để đổi mật khẩu mới!");

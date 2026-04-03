@@ -79,7 +79,7 @@ public class RuleService {
                 .cronExpression(cronExpression)
                 .actionDevice(actionDevice)
                 .actionCommand(request.getActionCommand())
-                .isActive(true) // Mặc định bật khi mới tạo
+                .isActive(true)
                 .build();
 
         rule = ruleRepository.save(rule);
