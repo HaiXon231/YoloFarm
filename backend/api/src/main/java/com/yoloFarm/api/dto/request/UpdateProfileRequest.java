@@ -1,6 +1,7 @@
 package com.yoloFarm.api.dto.request;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,6 +21,7 @@ public class UpdateProfileRequest {
 
     private String currentPassword;
 
-    @Size(min = 6, message = "Mật khẩu mới phải có ít nhất 6 ký tự")
+    @Size(min = 8, message = "Mật khẩu mới phải có ít nhất 8 ký tự")
+    @Pattern(regexp = "^(?=.*[a-zA-Z])(?=.*\\d).+$", message = "Mật khẩu mới phải chứa cả chữ và số")
     private String newPassword;
 }

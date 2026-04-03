@@ -36,7 +36,7 @@ public class MqttReceiverLogicTest {
         mockObserver = Mockito.mock(Observer.class);
         mockDeviceRepo = Mockito.mock(DeviceRepository.class);
         mockMqttClient = Mockito.mock(IMqttClient.class);
-        
+
         mqttReceiverService = new MqttReceiverService(List.of(mockObserver), mockMqttClient, mockDeviceRepo);
         mqttReceiverService.init(); // Kích hoạt @PostConstruct
     }
@@ -45,7 +45,7 @@ public class MqttReceiverLogicTest {
     public void testMqttMessageNotifiesObservers() throws Exception {
         UUID deviceId = UUID.randomUUID();
         UUID farmId = UUID.randomUUID();
-        
+
         Farm mockFarm = new Farm();
         mockFarm.setId(farmId);
 
@@ -57,15 +57,44 @@ public class MqttReceiverLogicTest {
         mockDevice.setId(deviceId);
         mockDevice.setModel(mockModel);
         mockDevice.setFarm(mockFarm);
-        
+
         // Mock DB: Khi tìm kiếm bằng "temp-feed" thì trả về mockDevice
-        when(mockDeviceRepo.findByAdafruitFeedKeyWithModelAndFarm("temp-feed")).thenReturn(Optional.of(mockDevice));
+        when(mockDeviceRepo.findByAdafruitFeedKeyIgnoreCaseWithModelAndFarm("temp-feed"))
+                .thenReturn(Optional.of(mockDevice));
 
         // [THỰC THI] - Giả lập Adafruit IO đẩy bản tin
         MqttMessage mqttMsg = new MqttMessage("37.5".getBytes());
         mqttReceiverService.messageArrived("testuser/feeds/temp-feed", mqttMsg);
 
         // [KIỂM TRA] - Observer phải được gọi với SensorData chứa đúng thông tin
+        verify(mockObserver, times(1)).update(any(SensorData.class));
+    }
+
+    @Test
+    public void testMqttMessageResolvesDashUnderscoreAlias() throws Exception {
+        UUID deviceId = UUID.randomUUID();
+        UUID farmId = UUID.randomUUID();
+
+        Farm mockFarm = new Farm();
+        mockFarm.setId(farmId);
+
+        DeviceModel mockModel = new DeviceModel();
+        mockModel.setDeviceType(DeviceTypeEnum.SENSOR);
+        mockModel.setMetricType(MetricTypeEnum.SOIL_MOISTURE);
+
+        Device mockDevice = new Device();
+        mockDevice.setId(deviceId);
+        mockDevice.setModel(mockModel);
+        mockDevice.setFarm(mockFarm);
+
+        when(mockDeviceRepo.findByAdafruitFeedKeyIgnoreCaseWithModelAndFarm("oil-zone-b"))
+                .thenReturn(Optional.empty());
+        when(mockDeviceRepo.findByAdafruitFeedKeyIgnoreCaseWithModelAndFarm("oil_zone_b"))
+                .thenReturn(Optional.of(mockDevice));
+
+        MqttMessage mqttMsg = new MqttMessage("41.2".getBytes());
+        mqttReceiverService.messageArrived("testuser/feeds/oil-zone-b", mqttMsg);
+
         verify(mockObserver, times(1)).update(any(SensorData.class));
     }
 }

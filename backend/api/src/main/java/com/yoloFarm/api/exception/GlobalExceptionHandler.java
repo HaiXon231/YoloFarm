@@ -1,80 +1,101 @@
 package com.yoloFarm.api.exception;
 
+import com.yoloFarm.api.dto.response.ErrorResponse;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<?> handleEntityNotFoundException(EntityNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("code", 404, "message", "Không tìm thấy tài nguyên", "details", ex.getMessage()));
-    }
+        @ExceptionHandler(EntityNotFoundException.class)
+        public ResponseEntity<ErrorResponse> handleEntityNotFoundException(EntityNotFoundException ex) {
+                return build(HttpStatus.NOT_FOUND, "Không tìm thấy tài nguyên", ex.getMessage());
+        }
 
-    @ExceptionHandler(ConflictException.class)
-    public ResponseEntity<?> handleConflictException(ConflictException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(Map.of("code", 409, "message", "Xung đột dữ liệu", "details", ex.getMessage()));
-    }
+        @ExceptionHandler(ConflictException.class)
+        public ResponseEntity<ErrorResponse> handleConflictException(ConflictException ex) {
+                return build(HttpStatus.CONFLICT, "Xung đột dữ liệu", ex.getMessage());
+        }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<?> handleValidationException(MethodArgumentNotValidException ex) {
-        String details = ex.getBindingResult().getFieldErrors().stream()
-                .map(e -> e.getField() + ": " + e.getDefaultMessage())
-                .collect(Collectors.joining(", "));
-        return ResponseEntity.badRequest()
-                .body(Map.of("code", 400, "message", "Dữ liệu không hợp lệ", "details", details));
-    }
+        @ExceptionHandler(MethodArgumentNotValidException.class)
+        public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex) {
+                String details = ex.getBindingResult().getFieldErrors().stream()
+                                .map(e -> e.getField() + ": " + e.getDefaultMessage())
+                                .collect(Collectors.joining(", "));
+                return build(HttpStatus.BAD_REQUEST, "Dữ liệu không hợp lệ", details);
+        }
 
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<?> handleBadCredentials(BadCredentialsException ex) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("code", 401, "message", "Sai tên đăng nhập hoặc mật khẩu"));
-    }
+        @ExceptionHandler(ConstraintViolationException.class)
+        public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
+                return build(HttpStatus.BAD_REQUEST, "Dữ liệu không hợp lệ", ex.getMessage());
+        }
 
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<?> handleAccessDenied(AccessDeniedException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(Map.of("code", 403, "message", "Bạn không có quyền truy cập tài nguyên này"));
-    }
+        @ExceptionHandler(BadCredentialsException.class)
+        public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex) {
+                return build(HttpStatus.UNAUTHORIZED, "Sai tên đăng nhập hoặc mật khẩu", ex.getMessage());
+        }
 
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<?> handleIllegalState(IllegalStateException ex) {
-        return ResponseEntity.badRequest()
-                .body(Map.of("code", 400, "message", "Trạng thái không hợp lệ", "details", ex.getMessage()));
-    }
+        @ExceptionHandler(AuthenticationException.class)
+        public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex) {
+                return build(HttpStatus.UNAUTHORIZED, "Bạn chưa được xác thực hoặc phiên đăng nhập đã hết hạn",
+                                ex.getMessage());
+        }
 
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<?> handleUnreadableJson(HttpMessageNotReadableException ex) {
-        return ResponseEntity.badRequest()
-                .body(Map.of("code", 400, "message", "Body JSON không hợp lệ hoặc đang rỗng"));
-    }
+        @ExceptionHandler(AccessDeniedException.class)
+        public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
+                return build(HttpStatus.FORBIDDEN, "Bạn không có quyền truy cập tài nguyên này", ex.getMessage());
+        }
 
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<?> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(Map.of("code", 409, "message", "Xung đột dữ liệu", "details",
-                        "Kiểm tra dữ liệu trùng lặp hoặc ràng buộc khóa duy nhất"));
-    }
+        @ExceptionHandler(IllegalStateException.class)
+        public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex) {
+                return build(HttpStatus.BAD_REQUEST, "Trạng thái không hợp lệ", ex.getMessage());
+        }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleGeneral(Exception ex) {
-        log.error("Lỗi hệ thống không xác định", ex);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("code", 500, "message", "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau."));
-    }
+        @ExceptionHandler(IllegalArgumentException.class)
+        public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
+                return build(HttpStatus.BAD_REQUEST, "Dữ liệu đầu vào không hợp lệ", ex.getMessage());
+        }
+
+        @ExceptionHandler(HttpMessageNotReadableException.class)
+        public ResponseEntity<ErrorResponse> handleUnreadableJson(HttpMessageNotReadableException ex) {
+                return build(HttpStatus.BAD_REQUEST, "Body JSON không hợp lệ hoặc đang rỗng",
+                                ex.getMostSpecificCause().getMessage());
+        }
+
+        @ExceptionHandler(DataIntegrityViolationException.class)
+        public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+                return build(HttpStatus.CONFLICT,
+                                "Xung đột dữ liệu",
+                                "Kiểm tra dữ liệu trùng lặp hoặc ràng buộc khóa duy nhất");
+        }
+
+        @ExceptionHandler(Exception.class)
+        public ResponseEntity<ErrorResponse> handleGeneral(Exception ex) {
+                log.error("Lỗi hệ thống không xác định", ex);
+                return build(HttpStatus.INTERNAL_SERVER_ERROR,
+                                "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.",
+                                null);
+        }
+
+        private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, String details) {
+                ErrorResponse response = new ErrorResponse();
+                response.setCode(status.value());
+                response.setMessage(message);
+                response.setDetails(details);
+                return ResponseEntity.status(status).body(response);
+        }
 }

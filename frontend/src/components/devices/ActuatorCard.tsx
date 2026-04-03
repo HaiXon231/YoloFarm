@@ -56,9 +56,8 @@ export default function ActuatorCard({ device, onUpdate }: ActuatorCardProps) {
     <div className="card">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-            isOn ? 'bg-primary-container/30' : 'bg-surface-container-high'
-          }`}>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isOn ? 'bg-primary-container/30' : 'bg-surface-container-high'
+            }`}>
             <span className={`material-symbols-outlined text-xl ${isOn ? 'text-primary' : 'text-on-surface-variant'}`}>
               {icon}
             </span>
@@ -66,7 +65,7 @@ export default function ActuatorCard({ device, onUpdate }: ActuatorCardProps) {
           <div>
             <div className="flex items-center gap-1 group/name">
               <p className="font-bold text-on-surface truncate max-w-[140px]">{device.name}</p>
-              <button 
+              <button
                 onClick={() => setIsRenameOpen(true)}
                 className="p-1 rounded-md hover:bg-surface-container opacity-0 group-hover/name:opacity-100 transition-all"
                 title="Đổi tên"
@@ -98,12 +97,10 @@ export default function ActuatorCard({ device, onUpdate }: ActuatorCardProps) {
             disabled={isModeLoading}
             className="relative"
           >
-            <div className={`w-11 h-6 rounded-full transition-colors duration-300 ${
-              isAuto ? 'bg-primary' : 'bg-outline-variant'
-            }`}>
-              <div className={`absolute top-[2px] w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${
-                isAuto ? 'translate-x-[22px]' : 'translate-x-[2px]'
-              }`} />
+            <div className={`w-11 h-6 rounded-full transition-colors duration-300 ${isAuto ? 'bg-primary' : 'bg-outline-variant'
+              }`}>
+              <div className={`absolute top-[2px] w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${isAuto ? 'translate-x-[22px]' : 'translate-x-[2px]'
+                }`} />
             </div>
           </button>
         </div>
@@ -114,13 +111,12 @@ export default function ActuatorCard({ device, onUpdate }: ActuatorCardProps) {
         <button
           onClick={() => handleCommand('ON')}
           disabled={isCommandLoading || isAuto}
-          className={`flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all duration-200 ${
-            isAuto
+          className={`flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all duration-200 ${isAuto
               ? 'bg-surface-container-low text-outline-variant cursor-not-allowed'
               : isOn
                 ? 'bg-primary text-white shadow-md'
                 : 'bg-surface-container-low text-on-surface hover:bg-primary hover:text-white'
-          }`}
+            }`}
           title={isAuto ? 'Chuyển sang MANUAL để điều khiển' : ''}
         >
           <span className="material-symbols-outlined text-lg">power_settings_new</span>
@@ -129,13 +125,12 @@ export default function ActuatorCard({ device, onUpdate }: ActuatorCardProps) {
         <button
           onClick={() => handleCommand('OFF')}
           disabled={isCommandLoading || isAuto}
-          className={`flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all duration-200 ${
-            isAuto
+          className={`flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all duration-200 ${isAuto
               ? 'bg-surface-container-low text-outline-variant cursor-not-allowed'
               : !isOn
                 ? 'bg-on-surface text-white shadow-md'
                 : 'bg-surface-container-low text-on-surface hover:bg-on-surface hover:text-white'
-          }`}
+            }`}
           title={isAuto ? 'Chuyển sang MANUAL để điều khiển' : ''}
         >
           <span className="material-symbols-outlined text-lg">power_off</span>
@@ -143,7 +138,7 @@ export default function ActuatorCard({ device, onUpdate }: ActuatorCardProps) {
         </button>
       </div>
 
-      <RenameDeviceModal 
+      <RenameDeviceModal
         isOpen={isRenameOpen}
         onClose={() => setIsRenameOpen(false)}
         deviceId={device.id}

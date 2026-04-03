@@ -22,8 +22,8 @@ export default function OverviewTab({ farmId, devices, deviceModels, onDevicesCh
   const sensors = devices.filter((d) => d.device_type === 'SENSOR' && d.status === 'ACTIVE')
   const actuators = devices.filter((d) => d.device_type === 'ACTUATOR' && d.status === 'ACTIVE')
   const pendingDevices = devices.filter((d) => d.status === 'PENDING')
-  
-  const onlineCount = devices.filter((d) => 
+
+  const onlineCount = devices.filter((d) =>
     d.status === 'ACTIVE' && (d.connection_status === 'ONLINE' || activeInSession.has(d.id))
   ).length
 
@@ -38,7 +38,14 @@ export default function OverviewTab({ farmId, devices, deviceModels, onDevicesCh
   }, [])
 
   useEffect(() => {
-    connectToFarm(farmId, handleTelemetry, () => setWsConnected(true))
+    setWsConnected(false)
+    connectToFarm(
+      farmId,
+      handleTelemetry,
+      () => setWsConnected(true),
+      () => setWsConnected(false),
+      () => setWsConnected(false)
+    )
     return () => disconnectWebSocket()
   }, [farmId, handleTelemetry])
 

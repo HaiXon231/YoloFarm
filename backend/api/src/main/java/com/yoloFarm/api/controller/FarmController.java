@@ -30,13 +30,15 @@ public class FarmController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createFarm(@AuthenticationPrincipal User currentUser, @RequestBody FarmCreateRequest request) {
+    public ResponseEntity<?> createFarm(@AuthenticationPrincipal User currentUser,
+            @Valid @RequestBody FarmCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(farmService.createFarm(request, currentUser.getId()));
     }
 
     @GetMapping("/{farmId}")
-    public ResponseEntity<?> getFarmDetails(@AuthenticationPrincipal User currentUser, @PathVariable("farmId") UUID farmId) {
+    public ResponseEntity<?> getFarmDetails(@AuthenticationPrincipal User currentUser,
+            @PathVariable("farmId") UUID farmId) {
         return ResponseEntity.ok(farmService.getFarmById(farmId, currentUser.getId()));
     }
 
@@ -44,32 +46,34 @@ public class FarmController {
     public ResponseEntity<?> updateFarm(
             @AuthenticationPrincipal User currentUser,
             @PathVariable("farmId") UUID farmId,
-            @Valid @RequestBody FarmCreateRequest request
-    ) {
+            @Valid @RequestBody FarmCreateRequest request) {
         return ResponseEntity.ok(farmService.updateFarm(farmId, currentUser.getId(), request));
     }
 
     @DeleteMapping("/{farmId}")
-    public ResponseEntity<?> deleteFarm(@AuthenticationPrincipal User currentUser, @PathVariable("farmId") UUID farmId) {
+    public ResponseEntity<?> deleteFarm(@AuthenticationPrincipal User currentUser,
+            @PathVariable("farmId") UUID farmId) {
         farmService.deleteFarm(farmId, currentUser.getId());
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{farmId}/devices")
-    public ResponseEntity<?> getFarmDevices(@AuthenticationPrincipal User currentUser, @PathVariable("farmId") UUID farmId) {
+    public ResponseEntity<?> getFarmDevices(@AuthenticationPrincipal User currentUser,
+            @PathVariable("farmId") UUID farmId) {
         return ResponseEntity.ok(deviceService.getDevicesByFarmId(farmId, currentUser.getId()));
     }
 
     @GetMapping("/{farmId}/rules")
-    public ResponseEntity<?> getFarmRules(@AuthenticationPrincipal User currentUser, @PathVariable("farmId") UUID farmId) {
+    public ResponseEntity<?> getFarmRules(@AuthenticationPrincipal User currentUser,
+            @PathVariable("farmId") UUID farmId) {
         return ResponseEntity.ok(ruleService.getRulesByFarmId(farmId, currentUser.getId()));
     }
 
     @PostMapping("/{farmId}/ai-analysis")
     public ResponseEntity<?> analyzeAi(@AuthenticationPrincipal User currentUser,
-                                       @PathVariable("farmId") UUID farmId,
-                                       @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
-                                       @RequestParam("analysis_type") String analysisType) {
+            @PathVariable("farmId") UUID farmId,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam("analysis_type") String analysisType) {
         return ResponseEntity.ok(aiAnalysisService.analyzeImage(currentUser.getId(), farmId, file, analysisType));
     }
 

@@ -1,6 +1,7 @@
 package com.yoloFarm.api.controller;
 
 import com.yoloFarm.api.dto.request.DeviceRenameRequest;
+import com.yoloFarm.api.dto.request.DeviceCommandRequest;
 import com.yoloFarm.api.enums.OperatingModeEnum;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,25 +33,23 @@ public class DeviceController {
     public ResponseEntity<?> updateDeviceName(
             @AuthenticationPrincipal User currentUser,
             @PathVariable("deviceId") UUID deviceId,
-            @Valid @RequestBody DeviceRenameRequest request
-    ) {
+            @Valid @RequestBody DeviceRenameRequest request) {
         return ResponseEntity.ok(deviceService.updateDeviceName(currentUser.getId(), deviceId, request.getName()));
     }
 
     @PostMapping("/{deviceId}/remove-requests")
     public ResponseEntity<?> requestDeviceRemoval(
             @AuthenticationPrincipal User currentUser,
-            @PathVariable("deviceId") UUID deviceId
-    ) {
+            @PathVariable("deviceId") UUID deviceId) {
         deviceService.requestDeviceRemoval(currentUser.getId(), deviceId);
-        return ResponseEntity.ok(Map.of("message", "Đã gửi yêu cầu gỡ bỏ thiết bị. Vui lòng chờ Admin xác nhận thu hồi."));
+        return ResponseEntity
+                .ok(Map.of("message", "Đã gửi yêu cầu gỡ bỏ thiết bị. Vui lòng chờ Admin xác nhận thu hồi."));
     }
 
     @PostMapping("/requests")
     public ResponseEntity<?> requestNewDevice(
             @AuthenticationPrincipal User currentUser,
-            @Valid @RequestBody DeviceRequest request
-    ) {
+            @Valid @RequestBody DeviceRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(deviceService.addDevice(request, currentUser.getId()));
     }
 
@@ -68,13 +67,9 @@ public class DeviceController {
     public ResponseEntity<?> sendCommand(
             @AuthenticationPrincipal User currentUser,
             @PathVariable("deviceId") UUID deviceId,
-            @RequestBody Map<String, String> request
-    ) {
+            @Valid @RequestBody DeviceCommandRequest request) {
         deviceService.assertDeviceOwnership(currentUser.getId(), deviceId);
-        String command = request.get("command");
-        if (command == null || command.isBlank()) {
-            throw new IllegalStateException("Trường command không được để trống");
-        }
+        String command = request.getCommand().name();
         irrigationContext.executeControl(manualStrategy, null, deviceId, command);
         return ResponseEntity.ok(Map.of("message", "Lệnh [" + command + "] đã được gửi tới thiết bị thành công."));
     }
@@ -83,8 +78,7 @@ public class DeviceController {
     public ResponseEntity<?> changeMode(
             @AuthenticationPrincipal User currentUser,
             @PathVariable("deviceId") UUID deviceId,
-            @RequestBody Map<String, String> request
-    ) {
+            @RequestBody Map<String, String> request) {
         String modeRaw = request.get("operating_mode");
         if (modeRaw == null || modeRaw.isBlank()) {
             modeRaw = request.get("mode");

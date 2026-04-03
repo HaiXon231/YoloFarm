@@ -35,7 +35,7 @@ public class Device {
     @Column(nullable = false)
     private DeviceStatusEnum status;
 
-    @Column(length = 100)
+    @Column(length = 100, unique = true)
     private String adafruitFeedKey;
 
     @Enumerated(EnumType.STRING)

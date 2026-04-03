@@ -15,8 +15,11 @@ import jakarta.annotation.PostConstruct;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
@@ -26,7 +29,7 @@ public class MqttReceiverService implements Subject {
 
     private final List<Observer> injectedObservers;
     private final List<Observer> observers = new ArrayList<>();
-    
+
     private final IMqttClient mqttClient;
     private final DeviceRepository deviceRepository;
     private final AtomicBoolean subscribed = new AtomicBoolean(false);
@@ -84,21 +87,24 @@ public class MqttReceiverService implements Subject {
     public void messageArrived(String topic, MqttMessage message) {
         try {
             String payload = new String(message.getPayload());
-            
+
             // Xé nhỏ chuỗi Topic: "USERNAME/feeds/feedKey"
             String[] parts = topic.split("/");
+            if (parts.length < 3) {
+                log.warn("MqttReceiver: Topic không hợp lệ '{}', bỏ qua message.", topic);
+                return;
+            }
             String feedKey = parts[parts.length - 1]; // Lấy mảnh đuôi cùng
 
             log.info("MqttReceiver: Nhận dữ liệu [{}] từ feed [{}]", payload, feedKey);
 
-            // Tra soát ID Thiết bị theo đoạn mã feed trên Adafruit
-            // Tra soát ID Thiết bị theo đoạn mã feed trên Adafruit (JOIN FETCH để tránh LazyInit)
-            Optional<Device> deviceOpt = deviceRepository.findByAdafruitFeedKeyWithModelAndFarm(feedKey);
-            
+            // Tra soát ID Thiết bị theo feed key và các alias phổ biến từ Adafruit.
+            Optional<Device> deviceOpt = findDeviceByFeedAlias(feedKey);
+
             if (deviceOpt.isPresent()) {
                 Device device = deviceOpt.get();
                 // Ép chuỗi raw data Adafruit sang con số thập phân
-                Float metricValue = Float.parseFloat(payload);                
+                Float metricValue = Float.parseFloat(payload);
                 // Cập nhật trạng thái kết nối và lastSeen của thiết bị
                 device.setConnectionStatus(com.yoloFarm.api.enums.ConnectionStatusEnum.ONLINE);
                 device.setLastSeen(java.time.LocalDateTime.now());
@@ -113,8 +119,7 @@ public class MqttReceiverService implements Subject {
                         device.getId(),
                         metricType,
                         metricValue,
-                        Instant.now()
-                );
+                        Instant.now());
 
                 notifyObservers(sensorData);
             } else {
@@ -126,5 +131,47 @@ public class MqttReceiverService implements Subject {
         } catch (Exception e) {
             log.error("MqttReceiver: Lỗi khi xử lý thông điệp Adafruit", e);
         }
+    }
+
+    private Optional<Device> findDeviceByFeedAlias(String rawFeedKey) {
+        for (String candidate : buildFeedKeyCandidates(rawFeedKey)) {
+            Optional<Device> deviceOpt = deviceRepository.findByAdafruitFeedKeyIgnoreCaseWithModelAndFarm(candidate);
+            if (deviceOpt.isPresent()) {
+                if (!candidate.equals(rawFeedKey)) {
+                    log.info("MqttReceiver: Feed alias '{}' được map sang key '{}'.", rawFeedKey, candidate);
+                }
+                return deviceOpt;
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Set<String> buildFeedKeyCandidates(String rawFeedKey) {
+        Set<String> candidates = new LinkedHashSet<>();
+        if (rawFeedKey == null) {
+            return candidates;
+        }
+
+        String trimmed = rawFeedKey.trim();
+        if (trimmed.isEmpty()) {
+            return candidates;
+        }
+
+        candidates.add(trimmed);
+        candidates.add(trimmed.toLowerCase(Locale.ROOT));
+
+        if (trimmed.contains("-")) {
+            String underscored = trimmed.replace('-', '_');
+            candidates.add(underscored);
+            candidates.add(underscored.toLowerCase(Locale.ROOT));
+        }
+
+        if (trimmed.contains("_")) {
+            String dashed = trimmed.replace('_', '-');
+            candidates.add(dashed);
+            candidates.add(dashed.toLowerCase(Locale.ROOT));
+        }
+
+        return candidates;
     }
 }

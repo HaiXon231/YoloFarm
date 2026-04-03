@@ -5,7 +5,9 @@ import com.yoloFarm.api.dto.response.UserProfile;
 import com.yoloFarm.api.entity.User;
 import com.yoloFarm.api.exception.ConflictException;
 import com.yoloFarm.api.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,15 +22,15 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserProfile getCurrentProfile(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng!"));
-        
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng!"));
+
         return mapToProfile(user);
     }
 
     @Transactional
     public UserProfile updateProfile(String email, UpdateProfileRequest request) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng!"));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng!"));
 
         // Cập nhật Username nếu có và không trùng
         if (request.getUsername() != null && !request.getUsername().equals(user.getUsername())) {
@@ -49,13 +51,13 @@ public class UserService {
         // Đổi mật khẩu nếu có yêu cầu
         if (request.getNewPassword() != null && !request.getNewPassword().isEmpty()) {
             if (request.getCurrentPassword() == null || request.getCurrentPassword().isEmpty()) {
-                throw new RuntimeException("Bạn phải nhập mật khẩu hiện tại để đổi mật khẩu mới!");
+                throw new IllegalArgumentException("Bạn phải nhập mật khẩu hiện tại để đổi mật khẩu mới!");
             }
-            
+
             if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-                throw new RuntimeException("Mật khẩu hiện tại không chính xác!");
+                throw new BadCredentialsException("Mật khẩu hiện tại không chính xác!");
             }
-            
+
             user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         }
 
