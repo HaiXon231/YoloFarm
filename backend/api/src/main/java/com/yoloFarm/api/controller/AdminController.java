@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import com.yoloFarm.api.dto.request.DeviceModelRequest;
 import com.yoloFarm.api.service.DeviceModelService;
 import com.yoloFarm.api.service.DeviceService;
+import com.yoloFarm.api.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -27,6 +28,7 @@ import com.yoloFarm.api.dto.response.*;
 public class AdminController {
     private final DeviceModelService deviceModelService;
     private final DeviceService deviceService;
+    private final UserService userService;
     private final UserRepository userRepository;
     private final FarmRepository farmRepository;
     private final DeviceRepository deviceRepository;
@@ -135,5 +137,10 @@ public class AdminController {
             @RequestBody Map<String, String> request) {
         deviceService.rejectDevice(deviceId, request.get("reject_reason"));
         return ResponseEntity.ok(Map.of("message", "Đã từ chối yêu cầu và gửi thông báo cho Nông dân."));
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<List<UserProfile>> getAllUsers() {
+        return ResponseEntity.ok(userService.getAllProfiles());
     }
 }

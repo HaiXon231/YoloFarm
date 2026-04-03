@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react'
 import api, { getApiErrorMessage } from '@/lib/axios'
-import type { UserProfile } from '@/types'
+import type { UserProfile, AdminStatsResponse } from '@/types'
+import { useAuthStore } from '@/stores/authStore'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 
 export default function ProfilePage() {
+  const { role } = useAuthStore()
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([])
+  const [stats, setStats] = useState<AdminStatsResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
 
@@ -23,11 +27,29 @@ export default function ProfilePage() {
       setProfile(res.data)
       setUsername(res.data.username)
       setEmail(res.data.email)
+      
+      // Nếu là Admin, tải thêm danh sách người dùng và thống kê hệ thống
+      if (res.data.role === 'ADMIN') {
+        fetchAdminData()
+      }
     } catch (error) {
       toast.error(getApiErrorMessage(error))
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const fetchAdminData = async () => {
+     try {
+        const [usersRes, statsRes] = await Promise.all([
+           api.get<UserProfile[]>('/admin/users'),
+           api.get<AdminStatsResponse>('/admin/stats')
+        ])
+        setAllUsers(usersRes.data)
+        setStats(statsRes.data)
+     } catch (error) {
+        console.error('Error fetching admin data:', error)
+     }
   }
 
   useEffect(() => {
@@ -71,7 +93,7 @@ export default function ProfilePage() {
     }
   }
 
-  if (isLoading) return <LoadingSpinner size="lg" text="Đang tải hồ sơ nông dân..." />
+  if (isLoading) return <LoadingSpinner size="lg" text={`Đang tải hồ sơ ${role === 'ADMIN' ? 'quản trị viên' : 'nông dân'}...`} />
 
   return (
     <div className="animate-fade-in pb-12 relative">
@@ -85,19 +107,21 @@ export default function ProfilePage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: User Card */}
+        {/* Left Column: User Card & System Health (Admin) */}
         <div className="lg:col-span-1 space-y-6">
           <div className="premium-card p-10 flex flex-col items-center text-center">
-             <div className="w-32 h-32 rounded-[2.5rem] bg-gradient-to-br from-primary to-teal-700 p-1 mb-6 shadow-xl shadow-primary/20">
+             <div className={`w-32 h-32 rounded-[2.5rem] bg-gradient-to-br ${role === 'ADMIN' ? 'from-indigo-600 to-purple-800' : 'from-primary to-teal-700'} p-1 mb-6 shadow-xl shadow-primary/20`}>
                 <div className="w-full h-full rounded-[2.2rem] bg-white flex items-center justify-center">
-                   <span className="text-5xl font-black text-primary">
+                   <span className={`text-5xl font-black ${role === 'ADMIN' ? 'text-indigo-600' : 'text-primary'}`}>
                      {profile?.username.charAt(0).toUpperCase()}
                    </span>
                 </div>
              </div>
              
              <h2 className="text-2xl font-black text-on-surface mb-1">{profile?.username}</h2>
-             <span className="badge-online !px-4 !py-1.5 mb-6">{profile?.role} Account</span>
+             <span className={role === 'ADMIN' ? 'badge-pending !px-4 !py-1.5 mb-6 !bg-indigo-50 !text-indigo-700' : 'badge-online !px-4 !py-1.5 mb-6'}>
+                {profile?.role} Account
+             </span>
              
              <div className="w-full h-[1px] bg-surface-container-high mb-6" />
              
@@ -118,12 +142,35 @@ export default function ProfilePage() {
                    <div>
                       <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Gia nhập</p>
                       <p className="text-sm font-bold text-on-surface">
-                        {profile?.created_at ? format(new Date(profile.created_at), 'dd MMMM yyyy') : 'N/A'}
+                        {profile?.created_at ? format(new Date(profile.created_at), 'dd/MM/yyyy') : 'N/A'}
                       </p>
                    </div>
                 </div>
              </div>
           </div>
+
+          {role === 'ADMIN' && stats && (
+             <div className="premium-card p-8 border-indigo-100 bg-indigo-50/30">
+                <div className="flex items-center gap-3 mb-6">
+                   <span className="material-symbols-outlined text-indigo-600">analytics</span>
+                   <h4 className="font-black text-indigo-900 text-sm uppercase tracking-wider">Trạng thái hệ thống</h4>
+                </div>
+                <div className="space-y-4">
+                   <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-on-surface-variant">API Gateway</span>
+                      <span className={`w-2 h-2 rounded-full ${stats.api_status ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                   </div>
+                   <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-on-surface-variant">MQTT Broker</span>
+                      <span className={`w-2 h-2 rounded-full ${stats.mqtt_status ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                   </div>
+                   <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-on-surface-variant">Database Info</span>
+                      <span className={`w-2 h-2 rounded-full ${stats.db_status ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                   </div>
+                </div>
+             </div>
+          )}
 
           <div className="premium-card p-8 bg-primary/5 border-primary/20">
              <div className="flex items-center gap-3 mb-4">
@@ -131,12 +178,12 @@ export default function ProfilePage() {
                 <h4 className="font-black text-primary text-sm uppercase tracking-wider">Hỗ trợ tài khoản</h4>
              </div>
              <p className="text-xs text-on-surface-variant leading-relaxed">
-               Nếu bạn gặp vấn đề trong việc cập nhật thông tin hặc mất quyền truy cập, vui lòng liên hệ Ban Quản Trị YoloFarm qua email support@yolofarm.com
+               Nếu bạn gặp vấn đề trong việc cập nhật thông tin hoặc mất quyền truy cập, vui lòng liên hệ Ban Quản Trị qua email support@yolofarm.com
              </p>
           </div>
         </div>
 
-        {/* Right Column: Edit Forms */}
+        {/* Right Column: Edit Forms & User Management */}
         <div className="lg:col-span-2 space-y-8">
           {/* General Information */}
           <div className="premium-card p-10">
@@ -145,20 +192,20 @@ export default function ProfilePage() {
                    <span className="material-symbols-outlined icon-filled">account_circle</span>
                 </div>
                 <div>
-                   <h3 className="text-xl font-black text-on-surface">Thông tin cơ bản</h3>
-                   <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Cập nhật tên và địa chỉ email</p>
+                   <h3 className="text-xl font-black text-on-surface">Thông tin cá nhân</h3>
+                   <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Cập nhật hồ sơ công khai</p>
                 </div>
              </div>
 
              <form onSubmit={handleUpdateInfo} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    <div className="space-y-2">
-                      <label className="label-text">Tên đăng nhập</label>
+                      <label className="label-text">Tên hiển thị</label>
                       <input 
                         className="input-field" 
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
-                        placeholder="Nhập tên đăng nhập mới"
+                        placeholder="Nhập tên mới"
                       />
                    </div>
                    <div className="space-y-2">
@@ -192,7 +239,7 @@ export default function ProfilePage() {
                 </div>
                 <div>
                    <h3 className="text-xl font-black text-on-surface">Bảo mật</h3>
-                   <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Thay đổi mật khẩu tài khoản</p>
+                   <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Thay đổi mật khẩu đăng nhập</p>
                 </div>
              </div>
 
@@ -241,6 +288,52 @@ export default function ProfilePage() {
                 </div>
              </form>
           </div>
+
+          {/* User Management (Admin Only) */}
+          {role === 'ADMIN' && (
+             <div className="premium-card p-10">
+                <div className="flex items-center gap-4 mb-8">
+                   <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                      <span className="material-symbols-outlined icon-filled">manage_accounts</span>
+                   </div>
+                   <div>
+                      <h3 className="text-xl font-black text-on-surface">Quản lý người dùng</h3>
+                      <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Danh sách tài khoản hệ thống</p>
+                   </div>
+                </div>
+
+                <div className="overflow-x-auto border border-surface-container rounded-2xl">
+                   <table className="w-full text-left text-sm border-collapse">
+                      <thead className="bg-surface-container text-on-surface font-black uppercase tracking-widest text-[10px]">
+                         <tr>
+                            <th className="px-6 py-4">Tài khoản</th>
+                            <th className="px-6 py-4">Email</th>
+                            <th className="px-6 py-4">Vai trò</th>
+                            <th className="px-6 py-4">Gia nhập</th>
+                         </tr>
+                      </thead>
+                      <tbody className="divide-y divide-surface-container">
+                         {allUsers.map((u) => (
+                            <tr key={u.id} className="hover:bg-surface-container-low transition-colors">
+                               <td className="px-6 py-4 font-bold text-on-surface">{u.username}</td>
+                               <td className="px-6 py-4 text-on-surface-variant">{u.email}</td>
+                               <td className="px-6 py-4 text-xs">
+                                  <span className={`px-3 py-1 rounded-full font-black ${
+                                     u.role === 'ADMIN' ? 'bg-indigo-50 text-indigo-700' : 'bg-emerald-50 text-emerald-700'
+                                  }`}>
+                                     {u.role}
+                                  </span>
+                               </td>
+                               <td className="px-6 py-4 text-xs text-on-surface-variant italic">
+                                  {format(new Date(u.created_at), 'dd/MM/yyyy')}
+                               </td>
+                            </tr>
+                         ))}
+                      </tbody>
+                   </table>
+                </div>
+             </div>
+          )}
         </div>
       </div>
     </div>

@@ -25,6 +25,13 @@ public class UserService {
         return mapToProfile(user);
     }
 
+    @Transactional(readOnly = true)
+    public java.util.List<UserProfile> getAllProfiles() {
+        return userRepository.findAll().stream()
+                .map(this::mapToProfile)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     @Transactional
     public UserProfile updateProfile(String email, UpdateProfileRequest request) {
         User user = userRepository.findByEmail(email)
