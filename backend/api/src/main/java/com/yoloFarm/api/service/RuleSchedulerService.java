@@ -38,6 +38,12 @@ public class RuleSchedulerService {
             String cron = rule.getCronExpression();
             if (cron == null || cron.isBlank()) continue;
 
+            // Tự động thêm field Giây (0) nếu Cron chỉ có 5 tham số định dạng chuẩn UNIX
+            String[] parts = cron.trim().split("\\s+");
+            if (parts.length == 5) {
+                cron = "0 " + cron.trim();
+            }
+
             try {
                 CronExpression cronExp = CronExpression.parse(cron);
                 // Kiểm tra xem thời điểm hiện tại (cắt phần giây/mili) có khớp với cron không

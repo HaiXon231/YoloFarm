@@ -40,7 +40,7 @@ public class AdminController {
                 .totalFarms(farmRepository.count())
                 .totalDevices(deviceRepository.count())
                 .pendingRequests(deviceRepository.countByStatus(DeviceStatusEnum.PENDING))
-                .activeDevices(deviceRepository.countByStatus(DeviceStatusEnum.ACTIVE))
+                .activeDevices(deviceRepository.countByConnectionStatus(com.yoloFarm.api.enums.ConnectionStatusEnum.ONLINE))
                 .apiStatus(true) // If this method is called, API is up
                 .mqttStatus(mqttClient.isConnected())
                 .dbStatus(true) // If counts above succeeded, DB is up

@@ -18,6 +18,7 @@ public interface DeviceRepository extends JpaRepository<Device, UUID> {
     long countByFarmId(UUID farmId);
     List<Device> findByStatus(DeviceStatusEnum status);
     long countByStatus(DeviceStatusEnum status);
+    long countByConnectionStatus(com.yoloFarm.api.enums.ConnectionStatusEnum connectionStatus);
     java.util.Optional<Device> findByAdafruitFeedKey(String adafruitFeedKey);
 
     /**

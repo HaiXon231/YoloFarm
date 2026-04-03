@@ -36,7 +36,7 @@ export default function AdminDetailDrawer({ isOpen, onClose, type, title }: Admi
       let result = res.data
       
       if (type === 'active_devices') {
-        result = result.filter((d: AdminDeviceResponse) => d.status === 'ACTIVE')
+        result = result.filter((d: AdminDeviceResponse) => d.connection_status === 'ONLINE')
       }
 
       setData(result)
@@ -171,9 +171,15 @@ export default function AdminDetailDrawer({ isOpen, onClose, type, title }: Admi
                             </td>
                             <td className="px-8 py-6 text-on-surface font-bold">{device.farm_name}</td>
                             <td className="px-8 py-6">
-                              <span className={device.status === 'ACTIVE' ? 'badge-online !px-5 !py-2 shadow-sm' : 'badge-pending !px-5 !py-2 shadow-sm'}>
-                                {device.status}
-                              </span>
+                              {type === 'active_devices' ? (
+                                <span className={device.connection_status === 'ONLINE' ? 'badge-online !px-5 !py-2 shadow-sm' : 'badge-disabled !px-5 !py-2 shadow-sm'}>
+                                  {device.connection_status}
+                                </span>
+                              ) : (
+                                <span className={device.status === 'ACTIVE' ? 'badge-online !px-5 !py-2 shadow-sm' : 'badge-pending !px-5 !py-2 shadow-sm'}>
+                                  {device.status}
+                                </span>
+                              )}
                             </td>
                           </tr>
                         ))}

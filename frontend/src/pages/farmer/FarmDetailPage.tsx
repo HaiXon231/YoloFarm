@@ -54,7 +54,11 @@ export default function FarmDetailPage() {
     }
   }
 
-  useEffect(() => { fetchData() }, [farmId])
+  useEffect(() => { 
+    fetchData() 
+    const interval = setInterval(fetchData, 30000) // Tự động đồng bộ ngầm mỗi 30s
+    return () => clearInterval(interval)
+  }, [farmId])
 
   if (isLoading) return <LoadingSpinner size="lg" text="Đang tải chi tiết nông trại..." />
   if (!farm || !farmId) return null

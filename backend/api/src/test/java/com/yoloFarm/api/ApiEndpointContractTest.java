@@ -10,6 +10,10 @@ import com.yoloFarm.api.service.DeviceModelService;
 import com.yoloFarm.api.service.DeviceService;
 import com.yoloFarm.api.service.RuleService;
 import com.yoloFarm.api.service.TelemetryService;
+import com.yoloFarm.api.repository.UserRepository;
+import com.yoloFarm.api.repository.FarmRepository;
+import com.yoloFarm.api.repository.DeviceRepository;
+import org.eclipse.paho.client.mqttv3.IMqttClient;
 import com.yoloFarm.api.service.strategy.IrrigationContext;
 import com.yoloFarm.api.service.strategy.ManualStrategy;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,6 +58,18 @@ class ApiEndpointContractTest {
 
     @MockitoBean
     private ControlService controlService;
+
+    @MockitoBean
+    private UserRepository userRepository;
+
+    @MockitoBean
+    private FarmRepository farmRepository;
+
+    @MockitoBean
+    private DeviceRepository deviceRepository;
+
+    @MockitoBean
+    private IMqttClient mqttClient;
 
     @MockitoBean
     private IrrigationContext irrigationContext;

@@ -26,6 +26,8 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     fetchStats()
+    const interval = setInterval(fetchStats, 30000) // Silent background polling every 30s
+    return () => clearInterval(interval)
   }, [])
 
   const handleCardClick = (type: 'farmers' | 'farms' | 'devices' | 'active_devices') => {

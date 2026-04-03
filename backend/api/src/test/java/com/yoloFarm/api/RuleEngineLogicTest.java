@@ -67,8 +67,12 @@ public class RuleEngineLogicTest {
         mockPump.setOperatingMode(OperatingModeEnum.AUTO); // Bắt buộc phải là AUTO mới chạy
         mockPump.setAdafruitFeedKey("pump-feed-01");
 
+        com.yoloFarm.api.entity.User mockUser = new com.yoloFarm.api.entity.User();
+        mockUser.setId(UUID.randomUUID());
+
         Farm mockFarm = new Farm();
         mockFarm.setId(farmId);
+        mockFarm.setOwner(mockUser);
 
         // Luật: ĐỘ ẨM MÀ BÉ HƠN 40 THÌ BẮT ĐẦU BƠM (Lệnh ON)
         Rule mockRule = new Rule();
