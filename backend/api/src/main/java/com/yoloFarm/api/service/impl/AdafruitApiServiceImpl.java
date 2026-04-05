@@ -116,4 +116,39 @@ public class AdafruitApiServiceImpl implements AdafruitApiService {
             throw new IllegalStateException("Lỗi sự cố khi kết nối HTTP tới Adafruit: " + e.getMessage());
         }
     }
+
+    @Override
+    public void deleteFeed(String feedKey) {
+        String encodedFeedKey = URLEncoder.encode(feedKey, StandardCharsets.UTF_8).replace("+", "%20");
+        String url = "https://io.adafruit.com/api/v2/" + username + "/feeds/" + encodedFeedKey;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-AIO-Key", aioKey);
+
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        try {
+            log.info("Gửi request xóa Feed [key={}] trên Adafruit IO...", feedKey);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.DELETE, request, String.class);
+            log.info("Xóa Feed thành công trên Adafruit. Status: {}", response.getStatusCode());
+        } catch (HttpClientErrorException e) {
+            String errorMsg = e.getResponseBodyAsString();
+            log.error("Lỗi khi xóa Adafruit Feed: Mã lỗi = {}, Response = {}", e.getStatusCode(), errorMsg);
+
+            if (e.getStatusCode().value() == 404) {
+                log.warn("Feed [{}] không tồn tại trên Adafruit, bỏ qua xóa feed từ xa.", feedKey);
+                return;
+            }
+            if (e.getStatusCode().value() == 403 || e.getStatusCode().value() == 401) {
+                throw new IllegalStateException(
+                        "Lỗi xác thực Adafruit khi xóa Feed (403/401). Chi tiết: " + errorMsg);
+            }
+
+            throw new IllegalStateException(
+                    "Lỗi từ máy chủ Adafruit khi xóa Feed (" + e.getStatusCode() + "): " + errorMsg);
+        } catch (Exception e) {
+            log.error("Lỗi nội bộ khi gọi API xóa Feed Adafruit", e);
+            throw new IllegalStateException("Lỗi sự cố khi kết nối HTTP tới Adafruit: " + e.getMessage());
+        }
+    }
 }

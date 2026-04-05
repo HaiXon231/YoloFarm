@@ -22,9 +22,24 @@ public class NotificationController {
         return ResponseEntity.ok(notificationService.getNotifications(currentUser.getId(), page, size));
     }
 
+    @GetMapping("/unread-count")
+    public ResponseEntity<?> getUnreadCount(@AuthenticationPrincipal User currentUser) {
+        long unreadCount = notificationService.getUnreadCount(currentUser.getId());
+        return ResponseEntity.ok(java.util.Map.of("unread_count", unreadCount));
+    }
+
     @PutMapping("/{notificationId}/read")
-    public ResponseEntity<?> markAsRead(@AuthenticationPrincipal User currentUser, @PathVariable("notificationId") UUID notificationId) {
+    public ResponseEntity<?> markAsRead(@AuthenticationPrincipal User currentUser,
+            @PathVariable("notificationId") UUID notificationId) {
         notificationService.markAsRead(notificationId, currentUser.getId());
         return ResponseEntity.ok(java.util.Map.of("message", "Đã đánh dấu đọc."));
+    }
+
+    @PutMapping("/read-all")
+    public ResponseEntity<?> markAllAsRead(@AuthenticationPrincipal User currentUser) {
+        int updatedCount = notificationService.markAllAsRead(currentUser.getId());
+        return ResponseEntity.ok(java.util.Map.of(
+                "message", "Đã đánh dấu tất cả thông báo là đã đọc.",
+                "updated_count", updatedCount));
     }
 }

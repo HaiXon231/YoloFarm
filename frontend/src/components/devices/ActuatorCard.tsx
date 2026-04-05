@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import api, { getApiErrorMessage } from '@/lib/axios'
 import type { DeviceWithModel } from '@/types'
 import RenameDeviceModal from './RenameDeviceModal'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface ActuatorCardProps {
   device: DeviceWithModel
@@ -15,6 +16,8 @@ export default function ActuatorCard({ device, onUpdate }: ActuatorCardProps) {
   const [localMode, setLocalMode] = useState(device.operating_mode)
   const [isOn, setIsOn] = useState(device.is_active)
   const [isRenameOpen, setIsRenameOpen] = useState(false)
+  const [isRemoveConfirmOpen, setIsRemoveConfirmOpen] = useState(false)
+  const [isRemoveLoading, setIsRemoveLoading] = useState(false)
 
   const isOnline = device.connection_status === 'ONLINE'
   const isAuto = localMode === 'AUTO'
@@ -52,6 +55,20 @@ export default function ActuatorCard({ device, onUpdate }: ActuatorCardProps) {
     }
   }
 
+  const handleRequestRemoval = async () => {
+    setIsRemoveLoading(true)
+    try {
+      const response = await api.post<{ message: string }>(`/devices/${device.id}/remove-requests`)
+      toast.success(response.data.message || 'Đã gửi yêu cầu gỡ bỏ thiết bị.')
+      setIsRemoveConfirmOpen(false)
+      onUpdate()
+    } catch (error) {
+      toast.error(getApiErrorMessage(error))
+    } finally {
+      setIsRemoveLoading(false)
+    }
+  }
+
   return (
     <div className="card">
       <div className="flex items-start justify-between mb-4">
@@ -71,6 +88,13 @@ export default function ActuatorCard({ device, onUpdate }: ActuatorCardProps) {
                 title="Đổi tên"
               >
                 <span className="material-symbols-outlined text-xs text-on-surface-variant">edit</span>
+              </button>
+              <button
+                onClick={() => setIsRemoveConfirmOpen(true)}
+                className="p-1 rounded-md hover:bg-error-container/10 opacity-0 group-hover/name:opacity-100 transition-all"
+                title="Yêu cầu thu hồi thiết bị"
+              >
+                <span className="material-symbols-outlined text-xs text-error">delete</span>
               </button>
             </div>
             <div className="flex items-center gap-2 mt-0.5">
@@ -112,10 +136,10 @@ export default function ActuatorCard({ device, onUpdate }: ActuatorCardProps) {
           onClick={() => handleCommand('ON')}
           disabled={isCommandLoading || isAuto}
           className={`flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all duration-200 ${isAuto
-              ? 'bg-surface-container-low text-outline-variant cursor-not-allowed'
-              : isOn
-                ? 'bg-primary text-white shadow-md'
-                : 'bg-surface-container-low text-on-surface hover:bg-primary hover:text-white'
+            ? 'bg-surface-container-low text-outline-variant cursor-not-allowed'
+            : isOn
+              ? 'bg-primary text-white shadow-md'
+              : 'bg-surface-container-low text-on-surface hover:bg-primary hover:text-white'
             }`}
           title={isAuto ? 'Chuyển sang MANUAL để điều khiển' : ''}
         >
@@ -126,10 +150,10 @@ export default function ActuatorCard({ device, onUpdate }: ActuatorCardProps) {
           onClick={() => handleCommand('OFF')}
           disabled={isCommandLoading || isAuto}
           className={`flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all duration-200 ${isAuto
-              ? 'bg-surface-container-low text-outline-variant cursor-not-allowed'
-              : !isOn
-                ? 'bg-on-surface text-white shadow-md'
-                : 'bg-surface-container-low text-on-surface hover:bg-on-surface hover:text-white'
+            ? 'bg-surface-container-low text-outline-variant cursor-not-allowed'
+            : !isOn
+              ? 'bg-on-surface text-white shadow-md'
+              : 'bg-surface-container-low text-on-surface hover:bg-on-surface hover:text-white'
             }`}
           title={isAuto ? 'Chuyển sang MANUAL để điều khiển' : ''}
         >
@@ -147,6 +171,17 @@ export default function ActuatorCard({ device, onUpdate }: ActuatorCardProps) {
           setIsRenameOpen(false)
           onUpdate()
         }}
+      />
+
+      <ConfirmDialog
+        isOpen={isRemoveConfirmOpen}
+        onClose={() => setIsRemoveConfirmOpen(false)}
+        onConfirm={handleRequestRemoval}
+        isLoading={isRemoveLoading}
+        title="Yêu cầu gỡ bỏ thiết bị"
+        message={`Gửi yêu cầu gỡ bỏ thiết bị [${device.name}] tới Admin? Sau khi được duyệt, thiết bị và feed Adafruit tương ứng sẽ bị thu hồi.`}
+        confirmText="Gửi yêu cầu"
+        variant="danger"
       />
     </div>
   )

@@ -23,6 +23,8 @@ public interface DeviceRepository extends JpaRepository<Device, UUID> {
 
     List<Device> findByStatus(DeviceStatusEnum status);
 
+    List<Device> findByStatusIn(List<DeviceStatusEnum> statuses);
+
     long countByStatus(DeviceStatusEnum status);
 
     long countByConnectionStatus(com.yoloFarm.api.enums.ConnectionStatusEnum connectionStatus);

@@ -67,7 +67,7 @@ export interface DeviceModelResponse {
 // ============================================
 // DEVICE DTOs
 // ============================================
-export type DeviceStatus = 'PENDING' | 'ACTIVE' | 'REJECTED'
+export type DeviceStatus = 'PENDING' | 'ACTIVE' | 'REJECTED' | 'PENDING_REMOVAL'
 export type ConnectionStatus = 'ONLINE' | 'OFFLINE'
 export type OperatingMode = 'AUTO' | 'MANUAL'
 

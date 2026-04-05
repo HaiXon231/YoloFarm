@@ -22,6 +22,7 @@ export default function OverviewTab({ farmId, devices, deviceModels, onDevicesCh
   const sensors = devices.filter((d) => d.device_type === 'SENSOR' && d.status === 'ACTIVE')
   const actuators = devices.filter((d) => d.device_type === 'ACTUATOR' && d.status === 'ACTIVE')
   const pendingDevices = devices.filter((d) => d.status === 'PENDING')
+  const pendingRemovalDevices = devices.filter((d) => d.status === 'PENDING_REMOVAL')
 
   const onlineCount = devices.filter((d) =>
     d.status === 'ACTIVE' && (d.connection_status === 'ONLINE' || activeInSession.has(d.id))
@@ -108,8 +109,8 @@ export default function OverviewTab({ farmId, devices, deviceModels, onDevicesCh
             <span className="label-text">Chờ duyệt</span>
             <span className="material-symbols-outlined text-amber-600 bg-amber-100 p-2 rounded-xl">pending_actions</span>
           </div>
-          <h2 className="font-headline text-3xl font-extrabold text-on-surface">{pendingDevices.length}</h2>
-          <span className="text-xs text-on-surface-variant mt-1 block">Yêu cầu đang xử lý</span>
+          <h2 className="font-headline text-3xl font-extrabold text-on-surface">{pendingDevices.length + pendingRemovalDevices.length}</h2>
+          <span className="text-xs text-on-surface-variant mt-1 block">{pendingDevices.length} cấp phát, {pendingRemovalDevices.length} thu hồi</span>
         </div>
       </div>
 
@@ -150,7 +151,7 @@ export default function OverviewTab({ farmId, devices, deviceModels, onDevicesCh
       )}
 
       {/* Pending Devices */}
-      {pendingDevices.length > 0 && (
+      {(pendingDevices.length > 0 || pendingRemovalDevices.length > 0) && (
         <section>
           <h3 className="font-headline text-lg font-bold text-on-surface mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-amber-600">pending</span>
@@ -168,6 +169,22 @@ export default function OverviewTab({ farmId, devices, deviceModels, onDevicesCh
                     <p className="text-xs text-on-surface-variant">{device.model_name || 'Chờ Admin duyệt'}</p>
                   </div>
                   <span className="badge-pending ml-auto">Pending</span>
+                </div>
+              </div>
+            ))}
+            {pendingRemovalDevices.map((device) => (
+              <div key={device.id} className="card opacity-70 border border-rose-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-rose-600">delete</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-on-surface">{device.name}</p>
+                    <p className="text-xs text-on-surface-variant">Yêu cầu gỡ bỏ đang chờ Admin duyệt</p>
+                  </div>
+                  <span className="ml-auto px-3 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
+                    Pending Removal
+                  </span>
                 </div>
               </div>
             ))}

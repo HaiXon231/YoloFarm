@@ -32,7 +32,8 @@ public class RuleSchedulerService {
         LocalDateTime now = LocalDateTime.now();
         log.debug("RuleScheduler: Kiểm tra các luật SCHEDULE lúc {}", now);
 
-        List<Rule> activeScheduledRules = ruleRepository.findByRuleTypeAndIsActiveTrue(RuleTypeEnum.SCHEDULE);
+        List<Rule> activeScheduledRules = ruleRepository
+                .findActiveScheduledRulesWithAssociations(RuleTypeEnum.SCHEDULE);
 
         for (Rule rule : activeScheduledRules) {
             String cron = rule.getCronExpression();
@@ -66,7 +67,7 @@ public class RuleSchedulerService {
                     }
                 }
             } catch (Exception e) {
-                log.error("Lỗi khi xử lý Cron Expression cho Rule {}: {}", rule.getId(), e.getMessage());
+                log.error("Lỗi khi xử lý scheduled rule {}: {}", rule.getId(), e.getMessage(), e);
             }
         }
     }

@@ -33,12 +33,21 @@ public class NotificationService {
 				.collect(Collectors.toList());
 	}
 
+	public long getUnreadCount(UUID userId) {
+		return notificationRepository.countUnreadByUserId(userId);
+	}
+
 	@Transactional
 	public NotificationResponse markAsRead(UUID notificationId, UUID userId) {
 		Notification notification = notificationRepository.findByIdAndUserId(notificationId, userId)
 				.orElseThrow(() -> new EntityNotFoundException("Notification not found with id: " + notificationId));
 		notification.setIsRead(true);
 		return mapToResponse(notificationRepository.save(notification));
+	}
+
+	@Transactional
+	public int markAllAsRead(UUID userId) {
+		return notificationRepository.markAllAsReadByUserId(userId);
 	}
 
 	@Transactional

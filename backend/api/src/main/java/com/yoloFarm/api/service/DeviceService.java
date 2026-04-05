@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -136,7 +137,8 @@ public class DeviceService {
     public List<DeviceResponse> getDeviceRequests(String status) {
         List<Device> devices;
         if (status == null || status.isBlank()) {
-            devices = deviceRepository.findByStatus(DeviceStatusEnum.PENDING);
+            devices = deviceRepository
+                    .findByStatusIn(List.of(DeviceStatusEnum.PENDING, DeviceStatusEnum.PENDING_REMOVAL));
         } else {
             devices = deviceRepository.findByStatus(DeviceStatusEnum.valueOf(status));
         }
@@ -147,6 +149,10 @@ public class DeviceService {
     public DeviceResponse approveDevice(UUID deviceId, String adafruitFeedKey) {
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new EntityNotFoundException("Device not found with id: " + deviceId));
+
+        if (device.getStatus() == DeviceStatusEnum.PENDING_REMOVAL) {
+            return approveDeviceRemoval(device);
+        }
 
         ensureModerationTransitionAllowed(device, DeviceStatusEnum.PENDING, "duyệt kích hoạt");
 
@@ -175,13 +181,24 @@ public class DeviceService {
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new EntityNotFoundException("Device not found with id: " + deviceId));
 
+        String suffix = (rejectReason == null || rejectReason.isBlank()) ? "" : " Lý do: " + rejectReason;
+
+        if (device.getStatus() == DeviceStatusEnum.PENDING_REMOVAL) {
+            device.setStatus(DeviceStatusEnum.ACTIVE);
+            Device saved = deviceRepository.save(device);
+
+            UUID ownerId = saved.getFarm().getOwner().getId();
+            notificationService.createSystemNotification(ownerId,
+                    "Yêu cầu gỡ bỏ thiết bị [" + saved.getName() + "] đã bị từ chối." + suffix);
+            return mapToResponse(saved);
+        }
+
         ensureModerationTransitionAllowed(device, DeviceStatusEnum.PENDING, "từ chối yêu cầu thiết bị");
 
         device.setStatus(DeviceStatusEnum.REJECTED);
         Device saved = deviceRepository.save(device);
 
         UUID ownerId = saved.getFarm().getOwner().getId();
-        String suffix = (rejectReason == null || rejectReason.isBlank()) ? "" : " Lý do: " + rejectReason;
         notificationService.createSystemNotification(ownerId,
                 "Yêu cầu thiết bị [" + saved.getName() + "] đã bị từ chối." + suffix);
         return mapToResponse(saved);
@@ -191,7 +208,43 @@ public class DeviceService {
     public void deleteDevice(UUID deviceId) {
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new EntityNotFoundException("Device not found with id: " + deviceId));
+        deleteDeviceAndCleanup(device, true);
+    }
+
+    private DeviceResponse approveDeviceRemoval(Device device) {
+        ensureModerationTransitionAllowed(device, DeviceStatusEnum.PENDING_REMOVAL, "duyệt thu hồi thiết bị");
+
+        UUID ownerId = device.getFarm().getOwner().getId();
+        String deviceName = device.getName();
+
+        DeviceResponse response = mapToResponse(device);
+        List<String> removedRuleNames = deleteDeviceAndCleanup(device, true);
+
+        notificationService.createSystemNotification(ownerId,
+                "Yêu cầu gỡ bỏ thiết bị [" + deviceName + "] đã được duyệt. Thiết bị đã được thu hồi khỏi hệ thống.");
+
+        if (!removedRuleNames.isEmpty()) {
+            String joinedRuleNames = removedRuleNames.stream().limit(5).collect(Collectors.joining(", "));
+            String suffix = removedRuleNames.size() > 5 ? " ..." : "";
+            notificationService.createSystemNotification(ownerId,
+                    "Các rule liên quan đến thiết bị [" + deviceName + "] đã bị xóa theo: "
+                            + joinedRuleNames + suffix + ".");
+        }
+
+        return response;
+    }
+
+    private List<String> deleteDeviceAndCleanup(Device device, boolean deleteAdafruitFeed) {
+        List<String> removedRuleNames = new java.util.ArrayList<>(
+                new LinkedHashSet<>(ruleRepository.findRuleNamesBoundToDevice(device.getId())));
+
+        if (deleteAdafruitFeed && device.getAdafruitFeedKey() != null && !device.getAdafruitFeedKey().isBlank()) {
+            adafruitApiService.deleteFeed(device.getAdafruitFeedKey());
+        }
+
+        ruleRepository.deleteRulesBoundToDevice(device.getId());
         deviceRepository.delete(device);
+        return removedRuleNames;
     }
 
     private String normalizeFeedKey(String rawFeedKey) {

@@ -19,4 +19,11 @@ public interface AdafruitApiService {
      * @param feedName Tên hiển thị mới của Feed
      */
     void updateFeedName(String feedKey, String feedName);
+
+    /**
+     * Xóa Feed khỏi Adafruit IO theo feed key.
+     *
+     * @param feedKey Mã khóa kỹ thuật của Feed
+     */
+    void deleteFeed(String feedKey);
 }

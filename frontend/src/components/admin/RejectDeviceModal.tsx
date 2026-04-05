@@ -13,6 +13,7 @@ interface RejectDeviceModalProps {
 export default function RejectDeviceModal({ device, onClose, onSuccess }: RejectDeviceModalProps) {
   const [reason, setReason] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const isRemovalRequest = device?.status === 'PENDING_REMOVAL'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -21,7 +22,9 @@ export default function RejectDeviceModal({ device, onClose, onSuccess }: Reject
     setIsLoading(true)
     try {
       await api.post(`/admin/devices/${device.id}/reject`, { reject_reason: reason })
-      toast.success('Đã từ chối yêu cầu và gửi thông báo cho Nông dân.')
+      toast.success(isRemovalRequest
+        ? 'Đã từ chối yêu cầu thu hồi và giữ thiết bị ở trạng thái ACTIVE.'
+        : 'Đã từ chối yêu cầu cấp phát và gửi thông báo cho Nông dân.')
       setReason('')
       onSuccess()
     } catch (error) {
@@ -32,7 +35,7 @@ export default function RejectDeviceModal({ device, onClose, onSuccess }: Reject
   }
 
   return (
-    <Modal isOpen={!!device} onClose={onClose} title="Từ chối yêu cầu thiết bị">
+    <Modal isOpen={!!device} onClose={onClose} title={isRemovalRequest ? 'Từ chối yêu cầu thu hồi thiết bị' : 'Từ chối yêu cầu cấp phát thiết bị'}>
       {device && (
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="bg-error-container/5 border border-error/10 rounded-xl p-4">
@@ -42,7 +45,7 @@ export default function RejectDeviceModal({ device, onClose, onSuccess }: Reject
               </div>
               <div>
                 <p className="font-bold text-on-surface">{device.name}</p>
-                <p className="text-xs text-on-surface-variant">Từ chối cấp phát</p>
+                <p className="text-xs text-on-surface-variant">{isRemovalRequest ? 'Từ chối thu hồi' : 'Từ chối cấp phát'}</p>
               </div>
             </div>
           </div>
@@ -54,7 +57,9 @@ export default function RejectDeviceModal({ device, onClose, onSuccess }: Reject
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               className="input-field min-h-[100px] resize-y"
-              placeholder="VD: Vượt quá số lượng thiết bị của gói cước hiện tại."
+              placeholder={isRemovalRequest
+                ? 'VD: Thiết bị vẫn cần để vận hành hệ thống tưới tự động.'
+                : 'VD: Vượt quá số lượng thiết bị của gói cước hiện tại.'}
               required
             />
           </div>

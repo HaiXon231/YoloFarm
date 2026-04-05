@@ -13,6 +13,29 @@ interface RuleFormModalProps {
   onSuccess: () => void
 }
 
+function parseScheduleTimeFromCron(cronExpression: string): { hour: number; minute: number } | null {
+  const parts = cronExpression.trim().split(/\s+/)
+
+  let minuteRaw: string | undefined
+  let hourRaw: string | undefined
+
+  if (parts.length === 5) {
+    ;[minuteRaw, hourRaw] = parts
+  } else if (parts.length === 6) {
+    ;[, minuteRaw, hourRaw] = parts
+  } else {
+    return null
+  }
+
+  const minute = Number.parseInt(minuteRaw ?? '', 10)
+  const hour = Number.parseInt(hourRaw ?? '', 10)
+
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return null
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null
+
+  return { hour, minute }
+}
+
 export default function RuleFormModal({ isOpen, onClose, farmId, devices, rule, onSuccess }: RuleFormModalProps) {
   const isEditing = !!rule
   const sensors = devices.filter((d) => d.device_type === 'SENSOR' && d.status === 'ACTIVE')
@@ -41,10 +64,10 @@ export default function RuleFormModal({ isOpen, onClose, farmId, devices, rule, 
       setActionCommand(rule.action_command)
       // Parse cron
       if (rule.cron_expression) {
-        const parts = rule.cron_expression.split(' ')
-        if (parts.length >= 2) {
-          setScheduleMinute(parseInt(parts[0]) || 0)
-          setScheduleHour(parseInt(parts[1]) || 6)
+        const parsedTime = parseScheduleTimeFromCron(rule.cron_expression)
+        if (parsedTime) {
+          setScheduleMinute(parsedTime.minute)
+          setScheduleHour(parsedTime.hour)
         }
       }
     } else {
@@ -119,11 +142,10 @@ export default function RuleFormModal({ isOpen, onClose, farmId, devices, rule, 
             <button
               type="button"
               onClick={() => setRuleType('CONDITION')}
-              className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                ruleType === 'CONDITION'
+              className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${ruleType === 'CONDITION'
                   ? 'bg-surface-container-lowest text-primary shadow-card'
                   : 'text-on-surface-variant hover:text-on-surface'
-              }`}
+                }`}
             >
               <span className="material-symbols-outlined text-sm align-middle mr-1">sensors</span>
               Theo cảm biến
@@ -131,11 +153,10 @@ export default function RuleFormModal({ isOpen, onClose, farmId, devices, rule, 
             <button
               type="button"
               onClick={() => setRuleType('SCHEDULE')}
-              className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                ruleType === 'SCHEDULE'
+              className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${ruleType === 'SCHEDULE'
                   ? 'bg-surface-container-lowest text-primary shadow-card'
                   : 'text-on-surface-variant hover:text-on-surface'
-              }`}
+                }`}
             >
               <span className="material-symbols-outlined text-sm align-middle mr-1">schedule</span>
               Theo lịch trình
@@ -244,22 +265,20 @@ export default function RuleFormModal({ isOpen, onClose, farmId, devices, rule, 
               <button
                 type="button"
                 onClick={() => setActionCommand('ON')}
-                className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${
-                  actionCommand === 'ON'
+                className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${actionCommand === 'ON'
                     ? 'bg-primary text-white'
                     : 'bg-surface-container-low text-on-surface-variant'
-                }`}
+                  }`}
               >
                 BẬT (ON)
               </button>
               <button
                 type="button"
                 onClick={() => setActionCommand('OFF')}
-                className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${
-                  actionCommand === 'OFF'
+                className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${actionCommand === 'OFF'
                     ? 'bg-on-surface text-white'
                     : 'bg-surface-container-low text-on-surface-variant'
-                }`}
+                  }`}
               >
                 TẮT (OFF)
               </button>

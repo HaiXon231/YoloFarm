@@ -37,10 +37,9 @@ export default function Sidebar() {
             key={link.to}
             to={link.to}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
-                isActive
-                  ? 'text-accent font-bold border-l-4 border-accent bg-white/5'
-                  : 'text-gray-400 font-medium hover:text-white hover:bg-white/10 border-l-4 border-transparent'
+              `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive
+                ? 'text-accent font-bold border-l-4 border-accent bg-white/5'
+                : 'text-gray-400 font-medium hover:text-white hover:bg-white/10 border-l-4 border-transparent'
               }`
             }
           >

@@ -33,7 +33,9 @@ public class AdminService {
                 .totalFarmers(userRepository.countByRole(RoleEnum.FARMER))
                 .totalFarms(farmRepository.count())
                 .totalDevices(deviceRepository.count())
-                .pendingRequests(deviceRepository.countByStatus(DeviceStatusEnum.PENDING))
+                .pendingRequests(
+                        deviceRepository.countByStatus(DeviceStatusEnum.PENDING)
+                                + deviceRepository.countByStatus(DeviceStatusEnum.PENDING_REMOVAL))
                 .activeDevices(
                         deviceRepository.countByConnectionStatus(com.yoloFarm.api.enums.ConnectionStatusEnum.ONLINE))
                 .apiStatus(true)

@@ -13,6 +13,29 @@ interface RulesTabProps {
   devices: DeviceWithModel[]
 }
 
+function parseScheduleTimeFromCron(cronExpression: string): { hour: number; minute: number } | null {
+  const parts = cronExpression.trim().split(/\s+/)
+
+  let minuteRaw: string | undefined
+  let hourRaw: string | undefined
+
+  if (parts.length === 5) {
+    ;[minuteRaw, hourRaw] = parts
+  } else if (parts.length === 6) {
+    ;[, minuteRaw, hourRaw] = parts
+  } else {
+    return null
+  }
+
+  const minute = Number.parseInt(minuteRaw ?? '', 10)
+  const hour = Number.parseInt(hourRaw ?? '', 10)
+
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return null
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null
+
+  return { hour, minute }
+}
+
 export default function RulesTab({ farmId, devices }: RulesTabProps) {
   const [rules, setRules] = useState<RuleResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -61,10 +84,9 @@ export default function RulesTab({ farmId, devices }: RulesTabProps) {
       return `${triggerName} ${rule.operator} ${rule.threshold_value}`
     }
     if (rule.cron_expression) {
-      // Parse simple cron to human-readable
-      const parts = rule.cron_expression.split(' ')
-      if (parts.length >= 2) {
-        return `Mỗi ngày lúc ${parts[1].padStart(2, '0')}:${parts[0].padStart(2, '0')}`
+      const parsedTime = parseScheduleTimeFromCron(rule.cron_expression)
+      if (parsedTime) {
+        return `Mỗi ngày lúc ${String(parsedTime.hour).padStart(2, '0')}:${String(parsedTime.minute).padStart(2, '0')}`
       }
     }
     return rule.cron_expression || '—'
@@ -116,9 +138,8 @@ export default function RulesTab({ farmId, devices }: RulesTabProps) {
                 <tr key={rule.id} className="border-b border-surface-container-low/50 hover:bg-surface-container-low/30 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <span className={`material-symbols-outlined text-sm ${
-                        rule.rule_type === 'CONDITION' ? 'text-primary' : 'text-tertiary'
-                      }`}>
+                      <span className={`material-symbols-outlined text-sm ${rule.rule_type === 'CONDITION' ? 'text-primary' : 'text-tertiary'
+                        }`}>
                         {rule.rule_type === 'CONDITION' ? 'sensors' : 'schedule'}
                       </span>
                       <span className="font-semibold text-on-surface text-sm">{rule.rule_name}</span>

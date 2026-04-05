@@ -68,7 +68,7 @@ export default function App() {
           <Route path="/admin/dashboard" element={<ProtectedRoute requiredRole="ADMIN"><AdminDashboardPage /></ProtectedRoute>} />
           <Route path="/admin/device-requests" element={<ProtectedRoute requiredRole="ADMIN"><DeviceRequestsPage /></ProtectedRoute>} />
           <Route path="/admin/device-models" element={<ProtectedRoute requiredRole="ADMIN"><DeviceModelsPage /></ProtectedRoute>} />
-          
+
           {/* Global Profiles */}
           <Route path="/profile" element={<ProfilePage />} />
         </Route>

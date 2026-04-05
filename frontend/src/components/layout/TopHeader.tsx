@@ -6,13 +6,46 @@ import { useNotificationStore } from '@/stores/notificationStore'
 
 export default function TopHeader() {
   const { user } = useAuthStore()
-  const { notifications, unreadCount, isOpen, fetchNotifications, markAsRead, togglePanel, closePanel } =
+  const {
+    notifications,
+    unreadCount,
+    isOpen,
+    hasMore,
+    isLoading,
+    isLoadingMore,
+    isMarkingAll,
+    fetchNotifications,
+    fetchUnreadCount,
+    loadMoreNotifications,
+    markAsRead,
+    markAllAsRead,
+    togglePanel,
+    closePanel,
+  } =
     useNotificationStore()
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchNotifications()
   }, [fetchNotifications])
+
+  // Always refresh latest notifications whenever user opens dropdown.
+  useEffect(() => {
+    if (isOpen) {
+      fetchNotifications()
+    }
+  }, [isOpen, fetchNotifications])
+
+  // Keep bell badge in sync with server unread count.
+  useEffect(() => {
+    fetchUnreadCount()
+
+    const intervalId = window.setInterval(() => {
+      fetchUnreadCount()
+    }, 30000)
+
+    return () => window.clearInterval(intervalId)
+  }, [fetchUnreadCount])
 
   // Close panel on click outside
   useEffect(() => {
@@ -65,41 +98,65 @@ export default function TopHeader() {
           {/* Notification Dropdown */}
           {isOpen && (
             <div className="absolute right-0 top-14 w-96 bg-surface-container-lowest rounded-2xl shadow-modal border border-surface-container-low animate-scale-in overflow-hidden">
-              <div className="px-5 py-4 border-b border-surface-container-low">
+              <div className="px-5 py-4 border-b border-surface-container-low flex items-center justify-between gap-3">
                 <h3 className="font-headline font-bold text-on-surface">Thông báo</h3>
+                <button
+                  onClick={markAllAsRead}
+                  disabled={isMarkingAll}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-primary bg-primary-container/30 hover:bg-primary-container/50 no-underline transition-colors disabled:text-on-surface-variant disabled:bg-surface-container-low disabled:cursor-not-allowed"
+                >
+                  {isMarkingAll ? 'Đang xử lý...' : 'Đánh dấu đã xem tất cả'}
+                </button>
               </div>
               <div className="max-h-80 overflow-y-auto">
-                {notifications.length === 0 ? (
+                {isLoading ? (
+                  <div className="py-10 text-center text-sm text-on-surface-variant">
+                    Đang tải thông báo...
+                  </div>
+                ) : notifications.length === 0 ? (
                   <div className="py-10 text-center text-sm text-on-surface-variant">
                     Không có thông báo nào
                   </div>
                 ) : (
-                  notifications.map((notif) => (
-                    <button
-                      key={notif.id}
-                      onClick={() => {
-                        if (!notif.is_read) markAsRead(notif.id)
-                      }}
-                      className={`w-full text-left px-5 py-4 hover:bg-surface-container-low transition-colors border-b border-surface-container-low/50 ${
-                        notif.is_read ? 'opacity-60' : ''
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        {!notif.is_read && (
-                          <span className="w-2 h-2 mt-1.5 rounded-full bg-primary flex-shrink-0" />
-                        )}
-                        <div className={notif.is_read ? 'ml-5' : ''}>
-                          <p className="text-sm text-on-surface leading-relaxed">{notif.message}</p>
-                          <p className="text-xs text-on-surface-variant mt-1">
-                            {formatDistanceToNow(new Date(notif.created_at), {
-                              addSuffix: true,
-                              locale: vi,
-                            })}
-                          </p>
+                  <>
+                    {notifications.map((notif) => (
+                      <button
+                        key={notif.id}
+                        onClick={() => {
+                          if (!notif.is_read) markAsRead(notif.id)
+                        }}
+                        className={`w-full text-left px-5 py-4 hover:bg-surface-container-low transition-colors border-b border-surface-container-low/50 ${notif.is_read ? 'opacity-60' : ''
+                          }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          {!notif.is_read && (
+                            <span className="w-2 h-2 mt-1.5 rounded-full bg-primary flex-shrink-0" />
+                          )}
+                          <div className={notif.is_read ? 'ml-5' : ''}>
+                            <p className="text-sm text-on-surface leading-relaxed">{notif.message}</p>
+                            <p className="text-xs text-on-surface-variant mt-1">
+                              {formatDistanceToNow(new Date(notif.created_at), {
+                                addSuffix: true,
+                                locale: vi,
+                              })}
+                            </p>
+                          </div>
                         </div>
+                      </button>
+                    ))}
+
+                    {hasMore && (
+                      <div className="px-4 py-3 border-t border-surface-container-low">
+                        <button
+                          onClick={loadMoreNotifications}
+                          disabled={isLoadingMore}
+                          className="w-full py-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container text-sm font-semibold text-on-surface transition-colors disabled:opacity-60"
+                        >
+                          {isLoadingMore ? 'Đang tải thêm...' : 'Xem thêm thông báo'}
+                        </button>
                       </div>
-                    </button>
-                  ))
+                    )}
+                  </>
                 )}
               </div>
             </div>
