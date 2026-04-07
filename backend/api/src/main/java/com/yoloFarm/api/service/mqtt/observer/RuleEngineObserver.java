@@ -25,27 +25,25 @@ public class RuleEngineObserver implements Observer {
     @Override
     public void update(SensorData data) {
         log.info("RuleEngineObserver nhận dữ liệu: {} = {}", data.metricType(), data.value());
-        
-        // JOIN FETCH để tránh N+1 queries khi truy cập rule.getFarm() và rule.getActionDevice()
+
+        // JOIN FETCH để tránh N+1 queries khi truy cập rule.getFarm() và
+        // rule.getActionDevice()
         List<Rule> rules = ruleRepository.findActiveRulesWithAssociations(data.deviceId());
-        
+
         for (Rule rule : rules) {
             boolean conditionMet = evaluateCondition(data.value(), rule.getOperator(), rule.getThresholdValue());
-            
+
             if (conditionMet) {
-                log.info("Rule Triggered: Đã tự động bật/tắt thiết bị dựa trên cảm biến ({} {} {})", 
-                         data.value(), rule.getOperator(), rule.getThresholdValue());
-                
-                // Strategy truyền qua tham số, không dùng setStrategy() nữa
+                log.info("Rule Triggered: Đã tự động bật/tắt thiết bị dựa trên cảm biến ({} {} {})",
+                        data.value(), rule.getOperator(), rule.getThresholdValue());
+
                 irrigationContext.executeControl(
                         autoThresholdStrategy,
                         rule.getFarm().getId(),
                         rule.getActionDevice().getId(),
-                        rule.getActionCommand().name()
-                );
+                        rule.getActionCommand().name());
 
-                // Gửi thông báo hệ thống cho Nông dân
-                String msg = String.format("Hệ thống tự động: Đã %s [%s] do %s (%s %s %s)", 
+                String msg = String.format("Hệ thống tự động: Đã %s [%s] do %s (%s %s %s)",
                         rule.getActionCommand().name(),
                         rule.getActionDevice().getName(),
                         data.metricType(),

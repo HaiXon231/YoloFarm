@@ -31,11 +31,12 @@ public class ScheduledStrategy implements IrrigationStrategy {
         }
 
         String adafruitFeedKey = device.getAdafruitFeedKey();
-        if (adafruitFeedKey != null && !adafruitFeedKey.isBlank()) {
-            mqttSenderService.sendCommand(adafruitFeedKey, command);
-        } else {
-            log.warn("Thiết bị {} không có Adafruit Feed Key!", deviceId);
+        if (adafruitFeedKey == null || adafruitFeedKey.isBlank()) {
+            log.warn("Thiết bị {} không có Adafruit Feed Key được cấu hình!", deviceId);
+            return false;
         }
+
+        mqttSenderService.sendCommand(adafruitFeedKey, command);
 
         log.info("Đã gửi lệnh {} tự động (Theo Lịch Trình) cho thiết bị {}", command, deviceId);
         return true;

@@ -25,7 +25,6 @@ public class WebSocketNotifierObserver implements Observer {
             payload.put("value", data.value());
             payload.put("timestamp", data.timestamp());
 
-            // farmId đã có sẵn trong SensorData → không cần query DB lại!
             String destination = "/topic/farm/" + data.farmId() + "/telemetry";
             messagingTemplate.convertAndSend(destination, (Object) payload);
             log.info("WebSocketNotifierObserver: Đã đẩy dữ liệu Realtime lên kênh {}", destination);
