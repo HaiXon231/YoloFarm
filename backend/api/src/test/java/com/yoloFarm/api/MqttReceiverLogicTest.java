@@ -22,6 +22,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -70,7 +71,7 @@ public class MqttReceiverLogicTest {
         mqttReceiverService.messageArrived("testuser/feeds/temp-feed", mqttMsg);
 
         // [KIỂM TRA] - Observer phải được gọi với SensorData chứa đúng thông tin
-        verify(mockObserver, times(1)).update(any(SensorData.class));
+        verify(mockObserver, timeout(2000).times(1)).update(any(SensorData.class));
     }
 
     @Test
@@ -98,6 +99,6 @@ public class MqttReceiverLogicTest {
         MqttMessage mqttMsg = new MqttMessage("41.2".getBytes());
         mqttReceiverService.messageArrived("testuser/feeds/oil-zone-b", mqttMsg);
 
-        verify(mockObserver, times(1)).update(any(SensorData.class));
+        verify(mockObserver, timeout(2000).times(1)).update(any(SensorData.class));
     }
 }

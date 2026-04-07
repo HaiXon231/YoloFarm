@@ -36,6 +36,11 @@ public class MqttReceiverService implements Subject {
     private final SimpMessagingTemplate messagingTemplate;
     private final AtomicBoolean subscribed = new AtomicBoolean(false);
 
+    // Cache feed key → Device để tránh query DB lặp lại mỗi MQTT message
+    // ConcurrentHashMap an toàn cho multi-thread (MQTT callback + ApproveDevice concurrent)
+    private final java.util.concurrent.ConcurrentHashMap<String, Device> feedKeyCache
+            = new java.util.concurrent.ConcurrentHashMap<>();
+
     @Value("${adafruit.mqtt.username}")
     private String username;
 
@@ -162,16 +167,52 @@ public class MqttReceiverService implements Subject {
     }
 
     private Optional<Device> findDeviceByFeedAlias(String rawFeedKey) {
+        // 1. Kiểm tra cache ngay (O(1)) — tránh query DB mỗi message
+        if (rawFeedKey != null) {
+            Device cached = feedKeyCache.get(rawFeedKey.toLowerCase(Locale.ROOT));
+            if (cached != null) {
+                return Optional.of(cached);
+            }
+        }
+
+        // 2. Cache miss: thử các alias và query DB
         for (String candidate : buildFeedKeyCandidates(rawFeedKey)) {
             Optional<Device> deviceOpt = deviceRepository.findByAdafruitFeedKeyIgnoreCaseWithModelAndFarm(candidate);
             if (deviceOpt.isPresent()) {
                 if (!candidate.equals(rawFeedKey)) {
                     log.info("MqttReceiver: Feed alias '{}' được map sang key '{}'.", rawFeedKey, candidate);
                 }
+                // Warm cache với key gốc và key chuẩn hóa
+                Device device = deviceOpt.get();
+                feedKeyCache.put(candidate.toLowerCase(Locale.ROOT), device);
+                if (rawFeedKey != null) {
+                    feedKeyCache.put(rawFeedKey.toLowerCase(Locale.ROOT), device);
+                }
                 return deviceOpt;
             }
         }
         return Optional.empty();
+    }
+
+    /**
+     * Warm cache khi Device mới được approve — gọi từ DeviceService.approveDevice()
+     * Tránh cache miss lần đầu khi thiết bị gửi message ngay sau khi được duyệt.
+     */
+    public void cacheFeedKey(String feedKey, Device device) {
+        if (feedKey != null && device != null) {
+            feedKeyCache.put(feedKey.toLowerCase(Locale.ROOT), device);
+            log.debug("MqttReceiver: Pre-warmed cache cho feed key [{}] → device [{}]", feedKey, device.getId());
+        }
+    }
+
+    /**
+     * Xóa cache khi device bị remove hoặc feed key thay đổi.
+     */
+    public void evictFeedKeyCache(String feedKey) {
+        if (feedKey != null) {
+            feedKeyCache.remove(feedKey.toLowerCase(Locale.ROOT));
+            log.debug("MqttReceiver: Đã evict cache cho feed key [{}]", feedKey);
+        }
     }
 
     private Set<String> buildFeedKeyCandidates(String rawFeedKey) {

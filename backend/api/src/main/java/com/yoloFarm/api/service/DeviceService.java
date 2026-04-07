@@ -13,8 +13,11 @@ import com.yoloFarm.api.repository.DeviceModelRepository;
 import com.yoloFarm.api.repository.DeviceRepository;
 import com.yoloFarm.api.repository.FarmRepository;
 import com.yoloFarm.api.repository.RuleRepository;
+import com.yoloFarm.api.service.mqtt.MqttReceiverService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +41,11 @@ public class DeviceService {
     private final RuleRepository ruleRepository;
     private final NotificationService notificationService;
     private final AdafruitApiService adafruitApiService;
+
+    // @Lazy để tránh circular dependency: DeviceService → MqttReceiverService → (không còn vòng lặp)
+    @Lazy
+    @Autowired
+    private MqttReceiverService mqttReceiverService;
 
     @Transactional(readOnly = true)
     public List<DeviceResponse> getDevicesByFarmId(UUID farmId, UUID ownerId) {
@@ -169,6 +177,9 @@ public class DeviceService {
         device.setAdafruitFeedKey(resolvedFeedKey);
         device.setStatus(DeviceStatusEnum.ACTIVE);
         Device saved = deviceRepository.save(device);
+
+        // Warm MQTT feed key cache ngay — tránh DB query trong lần nhận MQTT message đầu tiên
+        mqttReceiverService.cacheFeedKey(resolvedFeedKey, saved);
 
         UUID ownerId = saved.getFarm().getOwner().getId();
         notificationService.createSystemNotification(ownerId,

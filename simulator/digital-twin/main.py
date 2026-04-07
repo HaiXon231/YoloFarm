@@ -42,7 +42,7 @@ class DigitalTwinManager:
         self.adafruit_key = os.getenv("ADAFRUIT_IO_KEY", "").strip()
         self.adafruit_broker = os.getenv("ADAFRUIT_BROKER", "io.adafruit.com").strip()
         self.adafruit_port = int(os.getenv("ADAFRUIT_PORT", "8883"))
-        self.sync_seconds = int(os.getenv("SYNC_SECONDS", "5"))
+        self.sync_seconds = int(os.getenv("SYNC_SECONDS", "15"))  # Tăng từ 5s → 15s: giảm 66% DB query thừa
         self.profiles_path = os.getenv("SIM_PROFILES_FILE", "profiles.json")
 
         self._lock = threading.RLock()
