@@ -18,6 +18,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +42,7 @@ public class DeviceService {
     private final RuleRepository ruleRepository;
     private final NotificationService notificationService;
     private final AdafruitApiService adafruitApiService;
+    private final JdbcTemplate jdbcTemplate;
 
     // @Lazy để tránh circular dependency: DeviceService → MqttReceiverService → (không còn vòng lặp)
     @Lazy
@@ -178,8 +180,12 @@ public class DeviceService {
         device.setStatus(DeviceStatusEnum.ACTIVE);
         Device saved = deviceRepository.save(device);
 
-        // Warm MQTT feed key cache ngay — tránh DB query trong lần nhận MQTT message đầu tiên
-        mqttReceiverService.cacheFeedKey(resolvedFeedKey, saved);
+        // Xóa cache (nếu có) để lần nhận tin nhắn tới nó tự load lại bằng Query chuẩn (JOIN FETCH model & farm)
+        // Tuyệt đối không nhét đối tượng 'saved' vào RAM Cache vì nó đang dính Lazy proxy (chưa được fetch full)
+        mqttReceiverService.evictFeedKeyCache(resolvedFeedKey);
+
+        // Bắn tín hiệu NOTIFY xuống Postgres để Python Simulator chạy ngay lập tức
+        jdbcTemplate.execute("NOTIFY device_events, 'approve'");
 
         UUID ownerId = saved.getFarm().getOwner().getId();
         notificationService.createSystemNotification(ownerId,
@@ -255,6 +261,10 @@ public class DeviceService {
 
         ruleRepository.deleteRulesBoundToDevice(device.getId());
         deviceRepository.delete(device);
+        
+        // Bắn tín hiệu NOTIFY xuống Postgres để Simulator bỏ lắng nghe thiết bị này ngay
+        jdbcTemplate.execute("NOTIFY device_events, 'remove'");
+        
         return removedRuleNames;
     }
 

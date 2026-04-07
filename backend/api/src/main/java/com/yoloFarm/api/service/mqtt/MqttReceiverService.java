@@ -34,6 +34,7 @@ public class MqttReceiverService implements Subject {
     private final IMqttClient mqttClient;
     private final DeviceRepository deviceRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
     private final AtomicBoolean subscribed = new AtomicBoolean(false);
 
     // Cache feed key → Device để tránh query DB lặp lại mỗi MQTT message
@@ -122,12 +123,14 @@ public class MqttReceiverService implements Subject {
                 Float metricValue = Float.parseFloat(payload);
 
                 // Phát hiện chuyển trạng thái OFFLINE → ONLINE để push WS (chỉ khi thực sự thay đổi)
-                boolean wasOffline = device.getConnectionStatus() !=
-                        com.yoloFarm.api.enums.ConnectionStatusEnum.ONLINE;
+                boolean wasOffline = device.getConnectionStatus() != com.yoloFarm.api.enums.ConnectionStatusEnum.ONLINE;
 
+                // Thay vì dùng deviceRepository.save(device) làm dính trấu Hibernate Detached LazyException
+                // Ta chọc thẳng UPDATE Query cực nhanh và an toàn tuyệt đối.
                 device.setConnectionStatus(com.yoloFarm.api.enums.ConnectionStatusEnum.ONLINE);
                 device.setLastSeen(java.time.LocalDateTime.now());
-                deviceRepository.save(device);
+                jdbcTemplate.update("UPDATE devices SET connection_status = 'ONLINE', last_seen = ? WHERE id = ?", 
+                        java.sql.Timestamp.valueOf(device.getLastSeen()), device.getId());
 
                 // Push WebSocket event khi thiết bị vừa quay lại ONLINE
                 if (wasOffline) {

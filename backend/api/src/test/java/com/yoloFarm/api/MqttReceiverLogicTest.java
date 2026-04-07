@@ -21,12 +21,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class MqttReceiverLogicTest {
+    private org.springframework.jdbc.core.JdbcTemplate mockJdbcTemplate;
 
     private MqttReceiverService mqttReceiverService;
     private Observer mockObserver;
@@ -40,8 +40,9 @@ public class MqttReceiverLogicTest {
         mockDeviceRepo = Mockito.mock(DeviceRepository.class);
         mockMqttClient = Mockito.mock(IMqttClient.class);
         mockMessagingTemplate = Mockito.mock(SimpMessagingTemplate.class);
+        mockJdbcTemplate = Mockito.mock(org.springframework.jdbc.core.JdbcTemplate.class);
 
-        mqttReceiverService = new MqttReceiverService(List.of(mockObserver), mockMqttClient, mockDeviceRepo, mockMessagingTemplate);
+        mqttReceiverService = new MqttReceiverService(List.of(mockObserver), mockMqttClient, mockDeviceRepo, mockMessagingTemplate, mockJdbcTemplate);
         mqttReceiverService.init(); // Kích hoạt @PostConstruct
     }
 

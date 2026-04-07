@@ -3,6 +3,7 @@ import logging
 import math
 import os
 import random
+import select
 import signal
 import ssl
 import threading
@@ -268,12 +269,41 @@ class DigitalTwinManager:
 
         self.logger.info("Digital twin runtime started")
 
+        # Đồng bộ hóa lần đầu khi khởi động
+        self._sync_once()
+
+        db_conn = None
         while self._running:
             try:
-                self._sync_once()
+                # Nếu mất kết nối, khởi tạo lại
+                if not db_conn or db_conn.closed:
+                    self.logger.info("Connecting to PostgreSQL for LISTEN...")
+                    db_conn = self._db_conn()
+                    db_conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+                    cur = db_conn.cursor()
+                    cur.execute("LISTEN device_events;")
+                    self.logger.info("Listening for PostgreSQL NOTIFY on 'device_events'...")
+
+                # Ngủ đông ở mức OS (tối đa 5s để còn check lệnh tắt máy tự động)
+                # Sẽ bật dậy LUÔN VÀ NGAY khi có thông báo từ DB
+                if select.select([db_conn], [], [], 5) == ([], [], []):
+                    pass # Chỉ là timeout ngủ đông thôi
+                else:
+                    db_conn.poll()
+                    while db_conn.notifies:
+                        notify = db_conn.notifies.pop(0)
+                        self.logger.info("Thức giấc bởi NOTIFY: kênh=%s, tín_hiệu=%s", notify.channel, notify.payload)
+                        self._sync_once()
+
             except Exception as ex:
-                self.logger.exception("Sync failed: %s", ex)
-            time.sleep(max(1, self.sync_seconds))
+                self.logger.exception("Lỗi ở vòng lặp Lắng nghe (LISTEN): %s", ex)
+                if db_conn and not db_conn.closed:
+                    db_conn.close()
+                db_conn = None
+                time.sleep(5)
+
+        if db_conn and not db_conn.closed:
+            db_conn.close()
 
         self.logger.info("Stopping runtimes")
         with self._lock:
