@@ -62,6 +62,18 @@ public interface DeviceRepository extends JpaRepository<Device, UUID> {
             """)
     List<AdminDeviceProjection> findAdminDeviceSummaries();
 
+    /**
+     * Lấy danh sách device đang ONLINE nhưng sắp bị đánh OFFLINE (chưa cập nhật dữ liệu quá threshold).
+     * JOIN FETCH farm để tránh LazyInitializationException trong @Scheduled context (ngoài HTTP transaction).
+     */
+    @Query("""
+            SELECT d FROM Device d
+            JOIN FETCH d.farm
+            WHERE d.connectionStatus = com.yoloFarm.api.enums.ConnectionStatusEnum.ONLINE
+              AND (d.lastSeen < :threshold OR d.lastSeen IS NULL)
+            """)
+    List<Device> findStaleOnlineDevices(@Param("threshold") java.time.LocalDateTime threshold);
+
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.data.jpa.repository.Query("UPDATE Device d SET d.connectionStatus = com.yoloFarm.api.enums.ConnectionStatusEnum.OFFLINE WHERE d.connectionStatus = com.yoloFarm.api.enums.ConnectionStatusEnum.ONLINE AND (d.lastSeen < :threshold OR d.lastSeen IS NULL)")
     void markStaleDevicesAsOffline(@Param("threshold") java.time.LocalDateTime threshold);

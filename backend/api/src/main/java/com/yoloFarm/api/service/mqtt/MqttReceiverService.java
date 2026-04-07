@@ -80,7 +80,16 @@ public class MqttReceiverService implements Subject {
     @Override
     public void notifyObservers(SensorData data) {
         for (Observer observer : observers) {
-            observer.update(data);
+            // Mỗi observer chạy trên thread riêng của JVM thread pool
+            // MQTT callback thread được giải phóng ngay lập tức
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    observer.update(data);
+                } catch (Exception e) {
+                    log.error("MqttReceiver: Observer [{}] gặp lỗi khi xử lý SensorData",
+                            observer.getClass().getSimpleName(), e);
+                }
+            });
         }
     }
 
