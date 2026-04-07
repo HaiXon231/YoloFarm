@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import api, { getApiErrorMessage } from '@/lib/axios'
 import type { AdminStatsResponse } from '@/types'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import toast from 'react-hot-toast'
 import AdminDetailDrawer from '@/components/admin/AdminDetailDrawer'
+import { connectAdminStats, disconnectAdminStats } from '@/lib/websocket'
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<AdminStatsResponse | null>(null)
@@ -13,7 +14,7 @@ export default function AdminDashboardPage() {
   const [detailType, setDetailType] = useState<'farmers' | 'farms' | 'devices' | 'active_devices' | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const res = await api.get<AdminStatsResponse>('/admin/stats')
       setStats(res.data)
@@ -22,13 +23,16 @@ export default function AdminDashboardPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
+    // Lần đầu load
     fetchStats()
-    const interval = setInterval(fetchStats, 30000) // Silent background polling every 30s
-    return () => clearInterval(interval)
-  }, [])
+    // Kết nối WebSocket: nhận push event từ backend khi có thiết bị online/offline
+    // Chỉ gọi fetchStats khi thực sự có thay đổi, không polling thừa
+    connectAdminStats(fetchStats)
+    return () => disconnectAdminStats()
+  }, [fetchStats])
 
   const handleCardClick = (type: 'farmers' | 'farms' | 'devices' | 'active_devices') => {
     setDetailType(type)

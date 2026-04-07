@@ -3,7 +3,7 @@ import type { DeviceWithModel, DeviceModelResponse, TelemetryMessage } from '@/t
 import SensorCard from './SensorCard'
 import ActuatorCard from './ActuatorCard'
 import AddDeviceModal from './AddDeviceModal'
-import { connectToFarm, disconnectWebSocket } from '@/lib/websocket'
+import { connectToFarm, disconnectWebSocket, type DeviceStatusEvent } from '@/lib/websocket'
 
 interface OverviewTabProps {
   farmId: string
@@ -38,6 +38,18 @@ export default function OverviewTab({ farmId, devices, deviceModels, onDevicesCh
     setTimeout(() => setFlashDeviceId(null), 600)
   }, [])
 
+  // Nhận push event từ backend khi thiết bị ONLINE/OFFLINE — cập nhật state ngay, không cần refetch
+  const handleDeviceStatus = useCallback((events: DeviceStatusEvent[]) => {
+    events.forEach((ev) => {
+      setActiveInSession((prev) => {
+        const next = new Set(prev)
+        if (ev.connectionStatus === 'ONLINE') next.add(ev.deviceId)
+        else next.delete(ev.deviceId)
+        return next
+      })
+    })
+  }, [])
+
   useEffect(() => {
     setWsConnected(false)
     connectToFarm(
@@ -45,10 +57,11 @@ export default function OverviewTab({ farmId, devices, deviceModels, onDevicesCh
       handleTelemetry,
       () => setWsConnected(true),
       () => setWsConnected(false),
-      () => setWsConnected(false)
+      () => setWsConnected(false),
+      handleDeviceStatus
     )
     return () => disconnectWebSocket()
-  }, [farmId, handleTelemetry])
+  }, [farmId, handleTelemetry, handleDeviceStatus])
 
   return (
     <div className="space-y-8 animate-fade-in">

@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.IMqttClient;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 
@@ -32,6 +33,7 @@ public class MqttReceiverService implements Subject {
 
     private final IMqttClient mqttClient;
     private final DeviceRepository deviceRepository;
+    private final SimpMessagingTemplate messagingTemplate;
     private final AtomicBoolean subscribed = new AtomicBoolean(false);
 
     @Value("${adafruit.mqtt.username}")
@@ -112,17 +114,34 @@ public class MqttReceiverService implements Subject {
 
             if (deviceOpt.isPresent()) {
                 Device device = deviceOpt.get();
-                // Ép chuỗi raw data Adafruit sang con số thập phân
                 Float metricValue = Float.parseFloat(payload);
-                // Cập nhật trạng thái kết nối và lastSeen của thiết bị
+
+                // Phát hiện chuyển trạng thái OFFLINE → ONLINE để push WS (chỉ khi thực sự thay đổi)
+                boolean wasOffline = device.getConnectionStatus() !=
+                        com.yoloFarm.api.enums.ConnectionStatusEnum.ONLINE;
+
                 device.setConnectionStatus(com.yoloFarm.api.enums.ConnectionStatusEnum.ONLINE);
                 device.setLastSeen(java.time.LocalDateTime.now());
                 deviceRepository.save(device);
 
-                // Dùng getMetricType() thay vì getDeviceType() để lấy đúng loại metric
+                // Push WebSocket event khi thiết bị vừa quay lại ONLINE
+                if (wasOffline) {
+                    java.util.List<java.util.Map<String, Object>> onlinePayload =
+                            java.util.List.of(java.util.Map.<String, Object>of(
+                                    "deviceId", device.getId().toString(),
+                                    "connectionStatus", "ONLINE"
+                            ));
+                    messagingTemplate.convertAndSend(
+                            "/topic/farm/" + device.getFarm().getId() + "/device-status",
+                            (Object) onlinePayload
+                    );
+                    messagingTemplate.convertAndSend("/topic/admin/stats-changed",
+                            (Object) java.util.Map.of("reason", "device_online"));
+                    log.info("MqttReceiver: Device [{}] vừa kết nối lại ONLINE.", device.getId());
+                }
+
                 String metricType = device.getModel().getMetricType().name();
 
-                // Đóng gói toàn bộ context vào SensorData
                 SensorData sensorData = new SensorData(
                         device.getFarm().getId(),
                         device.getId(),

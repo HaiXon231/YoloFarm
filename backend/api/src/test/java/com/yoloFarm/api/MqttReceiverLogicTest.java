@@ -14,6 +14,7 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,14 +31,16 @@ public class MqttReceiverLogicTest {
     private Observer mockObserver;
     private DeviceRepository mockDeviceRepo;
     private IMqttClient mockMqttClient;
+    private SimpMessagingTemplate mockMessagingTemplate;
 
     @BeforeEach
     public void setUp() {
         mockObserver = Mockito.mock(Observer.class);
         mockDeviceRepo = Mockito.mock(DeviceRepository.class);
         mockMqttClient = Mockito.mock(IMqttClient.class);
+        mockMessagingTemplate = Mockito.mock(SimpMessagingTemplate.class);
 
-        mqttReceiverService = new MqttReceiverService(List.of(mockObserver), mockMqttClient, mockDeviceRepo);
+        mqttReceiverService = new MqttReceiverService(List.of(mockObserver), mockMqttClient, mockDeviceRepo, mockMessagingTemplate);
         mqttReceiverService.init(); // Kích hoạt @PostConstruct
     }
 
