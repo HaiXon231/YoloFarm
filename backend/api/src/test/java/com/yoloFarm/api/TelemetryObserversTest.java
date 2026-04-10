@@ -19,7 +19,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class TelemetryWebSocketLogicTest {
+class TelemetryObserversTest {
 
     @Mock
     private TelemetryDataRepository telemetryDataRepository;
@@ -38,19 +38,19 @@ public class TelemetryWebSocketLogicTest {
     }
 
     @Test
-    public void testDatabaseLoggerSavesData() {
+    void shouldPersistTelemetry_whenDatabaseLoggerObserverReceivesData() {
         UUID deviceId = UUID.randomUUID();
         UUID farmId = UUID.randomUUID();
 
         SensorData data = new SensorData(farmId, deviceId, "HUMIDITY", 65.5f, Instant.now());
         databaseLoggerObserver.update(data);
-        
+
         // Xác nhận repository.save() đã được gọi để ném Data vào Database
         verify(telemetryDataRepository, times(1)).save(any());
     }
 
     @Test
-    public void testWebSocketNotifierBroadcastsToFarmChannel() {
+    void shouldBroadcastTelemetryToFarmTopic_whenWebSocketObserverReceivesData() {
         UUID deviceId = UUID.randomUUID();
         UUID farmId = UUID.randomUUID();
 
@@ -60,8 +60,9 @@ public class TelemetryWebSocketLogicTest {
 
         // Assert: Xác nhận kênh đích chứa đúng farmId
         String expectedDestination = "/topic/farm/" + farmId + "/telemetry";
-        
-        // Khẳng định Spring STOMP Template đã rải thông điệp JSON lên đúng kênh đích này
+
+        // Khẳng định Spring STOMP Template đã rải thông điệp JSON lên đúng kênh đích
+        // này
         verify(messagingTemplate, times(1)).convertAndSend(eq(expectedDestination), (Object) any(java.util.Map.class));
     }
 }

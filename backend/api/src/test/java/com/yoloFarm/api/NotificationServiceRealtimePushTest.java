@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -27,71 +27,74 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceRealtimePushTest {
 
-    @Mock
-    private NotificationRepository notificationRepository;
+        @Mock
+        private NotificationRepository notificationRepository;
 
-    @Mock
-    private UserRepository userRepository;
+        @Mock
+        private UserRepository userRepository;
 
-    @Mock
-    private SimpMessagingTemplate messagingTemplate;
+        @Mock
+        private SimpMessagingTemplate messagingTemplate;
 
-    @InjectMocks
-    private NotificationService notificationService;
+        @InjectMocks
+        private NotificationService notificationService;
 
-    @Test
-    void createSystemNotificationShouldPushUnreadCountToUserQueue() {
-        UUID userId = UUID.randomUUID();
-        User user = User.builder()
-                .id(userId)
-                .username("farmer-a")
-                .password("pwd")
-                .email("farmer-a@yolo.test")
-                .role(RoleEnum.FARMER)
-                .build();
+        @Test
+        void shouldPushUnreadCount_whenCreatingSystemNotification() {
+                UUID userId = UUID.randomUUID();
+                User user = User.builder()
+                                .id(userId)
+                                .username("farmer-a")
+                                .password("pwd")
+                                .email("farmer-a@yolo.test")
+                                .role(RoleEnum.FARMER)
+                                .build();
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(notificationRepository.save(any(Notification.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(notificationRepository.countUnreadByUserId(userId)).thenReturn(3L);
+                when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+                when(notificationRepository.save(any(Notification.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
+                when(notificationRepository.countUnreadByUserId(userId)).thenReturn(3L);
 
-        notificationService.createSystemNotification(userId, "Device approved");
+                notificationService.createSystemNotification(userId, "Device approved");
 
-        verify(messagingTemplate).convertAndSendToUser(
-                eq("farmer-a"),
-                eq("/queue/notifications-unread"),
-                eq(Map.of("unread_count", 3L)));
-    }
+                verify(messagingTemplate).convertAndSendToUser(
+                                eq("farmer-a"),
+                                eq("/queue/notifications-unread"),
+                                eq(Map.of("unread_count", 3L)));
+        }
 
-    @Test
-    void markAsReadShouldPushUpdatedUnreadCount() {
-        UUID userId = UUID.randomUUID();
-        UUID notificationId = UUID.randomUUID();
-        User user = User.builder()
-                .id(userId)
-                .username("farmer-b")
-                .password("pwd")
-                .email("farmer-b@yolo.test")
-                .role(RoleEnum.FARMER)
-                .build();
+        @Test
+        void shouldPushUpdatedUnreadCount_whenMarkingNotificationAsRead() {
+                UUID userId = UUID.randomUUID();
+                UUID notificationId = UUID.randomUUID();
+                User user = User.builder()
+                                .id(userId)
+                                .username("farmer-b")
+                                .password("pwd")
+                                .email("farmer-b@yolo.test")
+                                .role(RoleEnum.FARMER)
+                                .build();
 
-        Notification notification = Notification.builder()
-                .id(notificationId)
-                .user(user)
-                .message("Irrigation completed")
-                .isRead(false)
-                .createdAt(LocalDateTime.now())
-                .build();
+                Notification notification = Notification.builder()
+                                .id(notificationId)
+                                .user(user)
+                                .message("Irrigation completed")
+                                .isRead(false)
+                                .createdAt(LocalDateTime.now())
+                                .build();
 
-        when(notificationRepository.findByIdAndUserId(notificationId, userId)).thenReturn(Optional.of(notification));
-        when(notificationRepository.save(any(Notification.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(notificationRepository.countUnreadByUserId(userId)).thenReturn(1L);
+                when(notificationRepository.findByIdAndUserId(notificationId, userId))
+                                .thenReturn(Optional.of(notification));
+                when(notificationRepository.save(any(Notification.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
+                when(notificationRepository.countUnreadByUserId(userId)).thenReturn(1L);
 
-        notificationService.markAsRead(notificationId, userId);
+                notificationService.markAsRead(notificationId, userId);
 
-        assertEquals(true, notification.getIsRead());
-        verify(messagingTemplate).convertAndSendToUser(
-                eq("farmer-b"),
-                eq("/queue/notifications-unread"),
-                eq(Map.of("unread_count", 1L)));
-    }
+                assertTrue(notification.getIsRead());
+                verify(messagingTemplate).convertAndSendToUser(
+                                eq("farmer-b"),
+                                eq("/queue/notifications-unread"),
+                                eq(Map.of("unread_count", 1L)));
+        }
 }

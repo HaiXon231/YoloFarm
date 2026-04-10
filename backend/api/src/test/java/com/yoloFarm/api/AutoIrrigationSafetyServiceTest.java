@@ -71,7 +71,7 @@ class AutoIrrigationSafetyServiceTest {
     }
 
     @Test
-    void shouldForceOffWhenAutoRuntimeExceedsThreshold() {
+    void shouldForceOff_whenAutoRuntimeExceedsThreshold() {
         Device device = buildActiveAutoActuator();
         when(deviceRepository.findActiveAutoActuatorsWithFarmAndOwner()).thenReturn(List.of(device));
         when(irrigationContext.executeControl(any(), eq(device.getFarm().getId()), eq(device.getId()), eq("OFF")))
@@ -90,7 +90,7 @@ class AutoIrrigationSafetyServiceTest {
     }
 
     @Test
-    void shouldInitializeOnTimestampInsteadOfImmediateForceOff() {
+    void shouldInitializeOnTimestamp_whenAutoActuatorIsOnWithoutRuntimeState() {
         Device device = buildActiveAutoActuator();
         when(deviceRepository.findActiveAutoActuatorsWithFarmAndOwner()).thenReturn(List.of(device));
 

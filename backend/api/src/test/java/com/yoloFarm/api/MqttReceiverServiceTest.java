@@ -25,7 +25,7 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class MqttReceiverLogicTest {
+class MqttReceiverServiceTest {
     private org.springframework.jdbc.core.JdbcTemplate mockJdbcTemplate;
 
     private MqttReceiverService mqttReceiverService;
@@ -42,12 +42,13 @@ public class MqttReceiverLogicTest {
         mockMessagingTemplate = Mockito.mock(SimpMessagingTemplate.class);
         mockJdbcTemplate = Mockito.mock(org.springframework.jdbc.core.JdbcTemplate.class);
 
-        mqttReceiverService = new MqttReceiverService(List.of(mockObserver), mockMqttClient, mockDeviceRepo, mockMessagingTemplate, mockJdbcTemplate);
-        mqttReceiverService.init(); // Kích hoạt @PostConstruct
+        mqttReceiverService = new MqttReceiverService(List.of(mockObserver), mockMqttClient, mockDeviceRepo,
+                mockMessagingTemplate, mockJdbcTemplate);
+        mqttReceiverService.init();
     }
 
     @Test
-    public void testMqttMessageNotifiesObservers() throws Exception {
+    void shouldNotifyObservers_whenMessageMatchesKnownFeed() throws Exception {
         UUID deviceId = UUID.randomUUID();
         UUID farmId = UUID.randomUUID();
 
@@ -63,20 +64,17 @@ public class MqttReceiverLogicTest {
         mockDevice.setModel(mockModel);
         mockDevice.setFarm(mockFarm);
 
-        // Mock DB: Khi tìm kiếm bằng "temp-feed" thì trả về mockDevice
         when(mockDeviceRepo.findByAdafruitFeedKeyIgnoreCaseWithModelAndFarm("temp-feed"))
                 .thenReturn(Optional.of(mockDevice));
 
-        // [THỰC THI] - Giả lập Adafruit IO đẩy bản tin
         MqttMessage mqttMsg = new MqttMessage("37.5".getBytes());
         mqttReceiverService.messageArrived("testuser/feeds/temp-feed", mqttMsg);
 
-        // [KIỂM TRA] - Observer phải được gọi với SensorData chứa đúng thông tin
         verify(mockObserver, timeout(2000).times(1)).update(any(SensorData.class));
     }
 
     @Test
-    public void testMqttMessageResolvesDashUnderscoreAlias() throws Exception {
+    void shouldResolveDashUnderscoreAlias_whenPrimaryFeedLookupMisses() throws Exception {
         UUID deviceId = UUID.randomUUID();
         UUID farmId = UUID.randomUUID();
 

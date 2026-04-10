@@ -79,7 +79,7 @@ class DeviceServiceRemovalApprovalTest {
         }
 
         @Test
-        void approveRemovalShouldDeleteFeedDeviceAndNotifyRemovedRules() {
+        void shouldDeleteFeedAndNotifyRuleCleanup_whenApprovingPendingRemoval() {
                 Device device = buildPendingRemovalDevice("Máy bơm zone A", "pump-zone-a");
 
                 when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(device));
@@ -102,7 +102,7 @@ class DeviceServiceRemovalApprovalTest {
         }
 
         @Test
-        void approveRemovalShouldNotSendRuleRemovedNotificationWhenNoRulesBound() {
+        void shouldSkipRuleCleanupNotification_whenNoRulesAreBound() {
                 Device device = buildPendingRemovalDevice("Cảm biến đất", "soil-zone-a");
 
                 when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(device));
@@ -120,7 +120,7 @@ class DeviceServiceRemovalApprovalTest {
         }
 
         @Test
-        void approveRemovalShouldSkipDeleteFeedWhenFeedKeyMissing() {
+        void shouldSkipFeedDeletion_whenPendingRemovalDeviceHasNoFeedKey() {
                 Device device = buildPendingRemovalDevice("Cảm biến nhiệt", null);
 
                 when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(device));

@@ -67,7 +67,7 @@ class DeviceServiceRenameSyncTest {
     }
 
     @Test
-    void renameShouldSyncAdafruitFeedNameWhenFeedKeyExists() {
+    void shouldSyncAdafruitFeedName_whenDeviceHasFeedKeyAndNameChanges() {
         Device device = buildDevice("Pump Zone A", "pump-zone-a");
 
         when(deviceRepository.findByIdAndFarmOwnerId(deviceId, ownerId)).thenReturn(Optional.of(device));
@@ -80,7 +80,7 @@ class DeviceServiceRenameSyncTest {
     }
 
     @Test
-    void renameShouldNotSyncAdafruitWhenFeedKeyIsMissing() {
+    void shouldSkipAdafruitSync_whenDeviceHasNoFeedKey() {
         Device device = buildDevice("Humidity Sensor", null);
 
         when(deviceRepository.findByIdAndFarmOwnerId(deviceId, ownerId)).thenReturn(Optional.of(device));
@@ -93,7 +93,7 @@ class DeviceServiceRenameSyncTest {
     }
 
     @Test
-    void renameShouldNotSyncAdafruitWhenNameNotChanged() {
+    void shouldSkipAdafruitSync_whenNormalizedNameDoesNotChange() {
         Device device = buildDevice("Temperature Sensor", "temp-zone-a");
 
         when(deviceRepository.findByIdAndFarmOwnerId(deviceId, ownerId)).thenReturn(Optional.of(device));

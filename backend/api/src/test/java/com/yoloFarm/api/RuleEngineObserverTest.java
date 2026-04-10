@@ -30,7 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class RuleEngineLogicTest {
+class RuleEngineObserverTest {
 
     @Mock
     private RuleRepository ruleRepository;
@@ -67,7 +67,7 @@ public class RuleEngineLogicTest {
     }
 
     @Test
-    public void testRuleEngineTriggersAutoIrrigation() {
+    void shouldSendOnCommand_whenConditionMatchesAutoRule() {
         // [CHUẨN BỊ] - KHỞI TẠO MOCK DATA
         UUID sensorId = UUID.randomUUID();
         UUID pumpId = UUID.randomUUID();
@@ -115,7 +115,7 @@ public class RuleEngineLogicTest {
     }
 
     @Test
-    public void testRuleEngineIgnoresWhenConditionNotMet() {
+    void shouldSkipCommand_whenConditionDoesNotMatchRule() {
         // [CHUẨN BỊ]
         UUID sensorId = UUID.randomUUID();
         UUID farmId = UUID.randomUUID();
@@ -139,7 +139,7 @@ public class RuleEngineLogicTest {
     }
 
     @Test
-    public void testRuleEngineSkipsOnWhenActuatorAlreadyOn() {
+    void shouldSkipOnCommand_whenActuatorIsAlreadyOn() {
         UUID sensorId = UUID.randomUUID();
         UUID pumpId = UUID.randomUUID();
         UUID farmId = UUID.randomUUID();

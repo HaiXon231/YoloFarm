@@ -37,7 +37,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class RuleServiceConditionPairValidationTest {
+class RuleServiceSchedulePairingTest {
 
     @Mock
     private RuleRepository ruleRepository;
@@ -53,33 +53,28 @@ class RuleServiceConditionPairValidationTest {
 
     private UUID ownerId;
     private UUID farmId;
-    private UUID triggerDeviceId;
     private UUID actionDeviceId;
 
     @BeforeEach
     void setUp() {
         ownerId = UUID.randomUUID();
         farmId = UUID.randomUUID();
-        triggerDeviceId = UUID.randomUUID();
         actionDeviceId = UUID.randomUUID();
     }
 
     @Test
-    void createConditionRuleWithoutOppositeShouldBeInactive() {
+    void shouldCreateInactiveScheduleRule_whenOppositeRuleIsMissing() {
         Farm farm = buildFarm();
-        Device trigger = buildSensorDevice(triggerDeviceId, farm);
         Device action = buildActuatorDevice(actionDeviceId, farm);
 
-        RuleCreateRequest request = buildConditionRequest(ActionCommandEnum.ON);
+        RuleCreateRequest request = buildScheduleRequest(ActionCommandEnum.ON);
 
         when(farmRepository.findByIdAndOwnerId(farmId, ownerId)).thenReturn(Optional.of(farm));
-        when(deviceRepository.findByIdAndFarmOwnerId(triggerDeviceId, ownerId)).thenReturn(Optional.of(trigger));
         when(deviceRepository.findByIdAndFarmOwnerId(actionDeviceId, ownerId)).thenReturn(Optional.of(action));
-        when(ruleRepository.findByFarmIdAndActionDeviceIdAndTriggerDeviceIdAndRuleTypeAndActionCommand(
+        when(ruleRepository.findByFarmIdAndActionDeviceIdAndRuleTypeAndActionCommand(
                 eq(farmId),
                 eq(actionDeviceId),
-                eq(triggerDeviceId),
-                eq(RuleTypeEnum.CONDITION),
+                eq(RuleTypeEnum.SCHEDULE),
                 eq(ActionCommandEnum.OFF)))
                 .thenReturn(List.of());
         when(ruleRepository.save(any(Rule.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -90,22 +85,19 @@ class RuleServiceConditionPairValidationTest {
     }
 
     @Test
-    void createConditionRuleWithValidOppositeShouldAutoActivateBoth() {
+    void shouldActivateBothScheduleRules_whenValidOppositeExistsOnCreate() {
         Farm farm = buildFarm();
-        Device trigger = buildSensorDevice(triggerDeviceId, farm);
         Device action = buildActuatorDevice(actionDeviceId, farm);
 
-        RuleCreateRequest request = buildConditionRequest(ActionCommandEnum.ON);
-        Rule opposite = buildConditionRuleWithShape(farm, action, trigger, ActionCommandEnum.OFF, ">", 40f, false);
+        RuleCreateRequest request = buildScheduleRequest(ActionCommandEnum.ON);
+        Rule opposite = buildScheduleRuleWithCron(farm, action, ActionCommandEnum.OFF, "0 18 * * *", false);
 
         when(farmRepository.findByIdAndOwnerId(farmId, ownerId)).thenReturn(Optional.of(farm));
-        when(deviceRepository.findByIdAndFarmOwnerId(triggerDeviceId, ownerId)).thenReturn(Optional.of(trigger));
         when(deviceRepository.findByIdAndFarmOwnerId(actionDeviceId, ownerId)).thenReturn(Optional.of(action));
-        when(ruleRepository.findByFarmIdAndActionDeviceIdAndTriggerDeviceIdAndRuleTypeAndActionCommand(
+        when(ruleRepository.findByFarmIdAndActionDeviceIdAndRuleTypeAndActionCommand(
                 eq(farmId),
                 eq(actionDeviceId),
-                eq(triggerDeviceId),
-                eq(RuleTypeEnum.CONDITION),
+                eq(RuleTypeEnum.SCHEDULE),
                 eq(ActionCommandEnum.OFF)))
                 .thenReturn(List.of(opposite));
         when(ruleRepository.save(any(Rule.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -117,16 +109,14 @@ class RuleServiceConditionPairValidationTest {
     }
 
     @Test
-    void toggleConditionRuleOnWithoutOppositeShouldThrow() {
-        Rule existing = buildExistingConditionRule(ActionCommandEnum.ON, false);
-        existing.setTriggerDevice(buildSensorDevice(triggerDeviceId, existing.getFarm()));
+    void shouldThrowWhenActivatingScheduleRule_withoutOppositeRule() {
+        Rule existing = buildExistingScheduleRule(ActionCommandEnum.ON, false);
 
         when(ruleRepository.findByIdAndFarmOwnerId(existing.getId(), ownerId)).thenReturn(Optional.of(existing));
-        when(ruleRepository.findByFarmIdAndActionDeviceIdAndTriggerDeviceIdAndRuleTypeAndActionCommand(
+        when(ruleRepository.findByFarmIdAndActionDeviceIdAndRuleTypeAndActionCommand(
                 eq(farmId),
                 eq(actionDeviceId),
-                eq(triggerDeviceId),
-                eq(RuleTypeEnum.CONDITION),
+                eq(RuleTypeEnum.SCHEDULE),
                 eq(ActionCommandEnum.OFF)))
                 .thenReturn(List.of());
 
@@ -135,23 +125,16 @@ class RuleServiceConditionPairValidationTest {
     }
 
     @Test
-    void toggleConditionRuleOnWithOppositeShouldSucceed() {
-        Rule existing = buildExistingConditionRule(ActionCommandEnum.ON, false);
-        Rule opposite = buildConditionRuleWithShape(
-                existing.getFarm(),
-                existing.getActionDevice(),
-                existing.getTriggerDevice(),
-                ActionCommandEnum.OFF,
-                ">",
-                40f,
-                false);
+    void shouldActivateBothScheduleRules_whenToggleOnWithValidOpposite() {
+        Rule existing = buildExistingScheduleRule(ActionCommandEnum.ON, false);
+        Rule opposite = buildScheduleRuleWithCron(existing.getFarm(), existing.getActionDevice(), ActionCommandEnum.OFF,
+                "0 18 * * *", false);
 
         when(ruleRepository.findByIdAndFarmOwnerId(existing.getId(), ownerId)).thenReturn(Optional.of(existing));
-        when(ruleRepository.findByFarmIdAndActionDeviceIdAndTriggerDeviceIdAndRuleTypeAndActionCommand(
+        when(ruleRepository.findByFarmIdAndActionDeviceIdAndRuleTypeAndActionCommand(
                 eq(farmId),
                 eq(actionDeviceId),
-                eq(triggerDeviceId),
-                eq(RuleTypeEnum.CONDITION),
+                eq(RuleTypeEnum.SCHEDULE),
                 eq(ActionCommandEnum.OFF)))
                 .thenReturn(List.of(opposite));
         when(ruleRepository.save(any(Rule.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -163,23 +146,16 @@ class RuleServiceConditionPairValidationTest {
     }
 
     @Test
-    void toggleConditionRuleOffShouldAlsoSetOppositeInactive() {
-        Rule existing = buildExistingConditionRule(ActionCommandEnum.ON, true);
-        Rule opposite = buildConditionRuleWithShape(
-                existing.getFarm(),
-                existing.getActionDevice(),
-                existing.getTriggerDevice(),
-                ActionCommandEnum.OFF,
-                ">",
-                40f,
-                true);
+    void shouldDeactivateOppositeScheduleRule_whenTogglingOff() {
+        Rule existing = buildExistingScheduleRule(ActionCommandEnum.ON, true);
+        Rule opposite = buildScheduleRuleWithCron(existing.getFarm(), existing.getActionDevice(), ActionCommandEnum.OFF,
+                "0 18 * * *", true);
 
         when(ruleRepository.findByIdAndFarmOwnerId(existing.getId(), ownerId)).thenReturn(Optional.of(existing));
-        when(ruleRepository.findByFarmIdAndActionDeviceIdAndTriggerDeviceIdAndRuleTypeAndActionCommand(
+        when(ruleRepository.findByFarmIdAndActionDeviceIdAndRuleTypeAndActionCommand(
                 eq(farmId),
                 eq(actionDeviceId),
-                eq(triggerDeviceId),
-                eq(RuleTypeEnum.CONDITION),
+                eq(RuleTypeEnum.SCHEDULE),
                 eq(ActionCommandEnum.OFF)))
                 .thenReturn(List.of(opposite));
         when(ruleRepository.save(any(Rule.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -191,23 +167,16 @@ class RuleServiceConditionPairValidationTest {
     }
 
     @Test
-    void toggleConditionRuleOnWithConflictingLogicShouldThrow() {
-        Rule existing = buildExistingConditionRule(ActionCommandEnum.ON, false);
-        Rule opposite = buildConditionRuleWithShape(
-                existing.getFarm(),
-                existing.getActionDevice(),
-                existing.getTriggerDevice(),
-                ActionCommandEnum.OFF,
-                "<",
-                20f,
-                false);
+    void shouldThrowWhenActivatingScheduleRule_withSameCronAsOpposite() {
+        Rule existing = buildExistingScheduleRule(ActionCommandEnum.ON, false);
+        Rule opposite = buildScheduleRuleWithCron(existing.getFarm(), existing.getActionDevice(), ActionCommandEnum.OFF,
+                "0 6 * * *", false);
 
         when(ruleRepository.findByIdAndFarmOwnerId(existing.getId(), ownerId)).thenReturn(Optional.of(existing));
-        when(ruleRepository.findByFarmIdAndActionDeviceIdAndTriggerDeviceIdAndRuleTypeAndActionCommand(
+        when(ruleRepository.findByFarmIdAndActionDeviceIdAndRuleTypeAndActionCommand(
                 eq(farmId),
                 eq(actionDeviceId),
-                eq(triggerDeviceId),
-                eq(RuleTypeEnum.CONDITION),
+                eq(RuleTypeEnum.SCHEDULE),
                 eq(ActionCommandEnum.OFF)))
                 .thenReturn(List.of(opposite));
 
@@ -215,56 +184,47 @@ class RuleServiceConditionPairValidationTest {
         verify(ruleRepository, never()).save(any(Rule.class));
     }
 
-    private RuleCreateRequest buildConditionRequest(ActionCommandEnum command) {
+    private RuleCreateRequest buildScheduleRequest(ActionCommandEnum command) {
         RuleCreateRequest request = new RuleCreateRequest();
         request.setFarmId(farmId);
-        request.setRuleName("Auto rule");
-        request.setRuleType(RuleTypeEnum.CONDITION);
-        request.setTriggerDeviceId(triggerDeviceId);
-        request.setOperator("<");
-        request.setThresholdValue(30f);
+        request.setRuleName("Schedule rule");
+        request.setRuleType(RuleTypeEnum.SCHEDULE);
+        request.setCronExpression("0 6 * * *");
         request.setActionDeviceId(actionDeviceId);
         request.setActionCommand(command);
         return request;
     }
 
-    private Rule buildExistingConditionRule(ActionCommandEnum command, boolean active) {
+    private Rule buildExistingScheduleRule(ActionCommandEnum command, boolean active) {
         Farm farm = buildFarm();
-        Device trigger = buildSensorDevice(triggerDeviceId, farm);
         Device action = buildActuatorDevice(actionDeviceId, farm);
 
         Rule rule = new Rule();
         rule.setId(UUID.randomUUID());
         rule.setFarm(farm);
-        rule.setTriggerDevice(trigger);
         rule.setActionDevice(action);
         rule.setActionCommand(command);
-        rule.setRuleType(RuleTypeEnum.CONDITION);
-        rule.setRuleName("Condition Rule");
-        rule.setOperator("<");
-        rule.setThresholdValue(30f);
+        rule.setRuleType(RuleTypeEnum.SCHEDULE);
+        rule.setRuleName("Schedule Rule");
+        rule.setCronExpression("0 6 * * *");
         rule.setIsActive(active);
         return rule;
     }
 
-    private Rule buildConditionRuleWithShape(
+    private Rule buildScheduleRuleWithCron(
             Farm farm,
             Device actionDevice,
-            Device triggerDevice,
             ActionCommandEnum command,
-            String operator,
-            float threshold,
+            String cron,
             boolean isActive) {
         Rule rule = new Rule();
         rule.setId(UUID.randomUUID());
         rule.setFarm(farm);
-        rule.setTriggerDevice(triggerDevice);
         rule.setActionDevice(actionDevice);
         rule.setActionCommand(command);
-        rule.setRuleType(RuleTypeEnum.CONDITION);
-        rule.setRuleName("Complementary Condition Rule");
-        rule.setOperator(operator);
-        rule.setThresholdValue(threshold);
+        rule.setRuleType(RuleTypeEnum.SCHEDULE);
+        rule.setRuleName("Complementary Schedule Rule");
+        rule.setCronExpression(cron);
         rule.setIsActive(isActive);
         return rule;
     }
@@ -282,21 +242,6 @@ class RuleServiceConditionPairValidationTest {
         farm.setId(farmId);
         farm.setOwner(owner);
         return farm;
-    }
-
-    private Device buildSensorDevice(UUID id, Farm farm) {
-        DeviceModel model = DeviceModel.builder()
-                .id(UUID.randomUUID())
-                .modelName("Soil sensor")
-                .deviceType(DeviceTypeEnum.SENSOR)
-                .metricType(MetricTypeEnum.SOIL_MOISTURE)
-                .build();
-
-        Device device = new Device();
-        device.setId(id);
-        device.setFarm(farm);
-        device.setModel(model);
-        return device;
     }
 
     private Device buildActuatorDevice(UUID id, Farm farm) {

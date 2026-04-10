@@ -23,7 +23,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class RuleServiceDeleteRuleManualFallbackTest {
+class RuleServiceDeleteLifecycleTest {
 
     @Mock
     private RuleRepository ruleRepository;
@@ -38,7 +38,7 @@ class RuleServiceDeleteRuleManualFallbackTest {
     private RuleService ruleService;
 
     @Test
-    void deleteLastActiveRuleShouldForceActionDeviceToManual() {
+    void shouldForceActionDeviceToManual_whenDeletingLastActiveRule() {
         UUID ownerId = UUID.randomUUID();
         UUID ruleId = UUID.randomUUID();
         UUID deviceId = UUID.randomUUID();
@@ -62,7 +62,7 @@ class RuleServiceDeleteRuleManualFallbackTest {
     }
 
     @Test
-    void deleteRuleShouldNotForceManualWhenOtherActiveRulesStillExist() {
+    void shouldKeepAutoMode_whenOtherActiveRulesStillExist() {
         UUID ownerId = UUID.randomUUID();
         UUID ruleId = UUID.randomUUID();
         UUID deviceId = UUID.randomUUID();
@@ -86,7 +86,7 @@ class RuleServiceDeleteRuleManualFallbackTest {
     }
 
     @Test
-    void deleteInactiveRuleShouldNotForceManual() {
+    void shouldSkipManualFallback_whenDeletedRuleIsInactive() {
         UUID ownerId = UUID.randomUUID();
         UUID ruleId = UUID.randomUUID();
         UUID deviceId = UUID.randomUUID();
@@ -110,7 +110,7 @@ class RuleServiceDeleteRuleManualFallbackTest {
     }
 
     @Test
-    void deleteRuleShouldThrowWhenRuleNotFound() {
+    void shouldThrowWhenDeletingRule_thatDoesNotExist() {
         UUID ownerId = UUID.randomUUID();
         UUID ruleId = UUID.randomUUID();
 
