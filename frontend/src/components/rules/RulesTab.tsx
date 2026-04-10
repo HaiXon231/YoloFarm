@@ -13,6 +13,11 @@ interface RulesTabProps {
   devices: DeviceWithModel[]
 }
 
+type RuleDiagnostic = {
+  canActivate: boolean
+  reason: string | null
+}
+
 function parseScheduleTimeFromCron(cronExpression: string): { hour: number; minute: number } | null {
   const parts = cronExpression.trim().split(/\s+/)
 
@@ -76,6 +81,98 @@ export default function RulesTab({ farmId, devices }: RulesTabProps) {
   const getDeviceName = (deviceId: string | null) => {
     if (!deviceId) return '—'
     return devices.find((d) => d.id === deviceId)?.name || deviceId.slice(0, 8)
+  }
+
+  const normalizeOperator = (operator: string | null) => (operator ?? '').trim()
+  const isLowOperator = (operator: string) => operator === '<' || operator === '<='
+  const isHighOperator = (operator: string) => operator === '>' || operator === '>='
+
+  const normalizeCron = (cronExpression: string | null) => {
+    if (!cronExpression) return ''
+    const parts = cronExpression.trim().split(/\s+/)
+    if (parts.length === 5) return `0 ${parts.join(' ')}`
+    return parts.join(' ')
+  }
+
+  const buildRuleDiagnostics = (allRules: RuleResponse[]): Record<string, RuleDiagnostic> => {
+    const diagnostics: Record<string, RuleDiagnostic> = {}
+
+    const keyFor = (rule: RuleResponse) =>
+      rule.rule_type === 'CONDITION'
+        ? `CONDITION:${rule.action_device_id}:${rule.trigger_device_id ?? ''}`
+        : `SCHEDULE:${rule.action_device_id}`
+
+    const grouped = new Map<string, RuleResponse[]>()
+    for (const rule of allRules) {
+      const key = keyFor(rule)
+      if (!grouped.has(key)) grouped.set(key, [])
+      grouped.get(key)!.push(rule)
+    }
+
+    for (const [, group] of grouped) {
+      const onRules = group.filter((r) => r.action_command === 'ON')
+      const offRules = group.filter((r) => r.action_command === 'OFF')
+
+      const bothInactive = group.length === 2 && group.every((r) => !r.is_active)
+
+      let canActivate = false
+      let reason: string | null = null
+
+      if (onRules.length !== 1 || offRules.length !== 1) {
+        reason = 'Thiếu hoặc dư cặp ON/OFF cho cùng nhóm rule.'
+      } else {
+        const onRule = onRules[0]
+        const offRule = offRules[0]
+
+        if (onRule.rule_type === 'CONDITION') {
+          const onOperator = normalizeOperator(onRule.operator)
+          const offOperator = normalizeOperator(offRule.operator)
+          const onThreshold = onRule.threshold_value
+          const offThreshold = offRule.threshold_value
+
+          if (onThreshold == null || offThreshold == null) {
+            reason = 'Rule CONDITION thiếu threshold để ghép cặp hợp lệ.'
+          } else {
+            const validLowToHigh = isLowOperator(onOperator) && isHighOperator(offOperator) && onThreshold < offThreshold
+            const validHighToLow = isHighOperator(onOperator) && isLowOperator(offOperator) && offThreshold < onThreshold
+            canActivate = validLowToHigh || validHighToLow
+            if (!canActivate) {
+              reason = 'Cặp CONDITION mâu thuẫn logic (không đạt hysteresis ON/OFF).'
+            }
+          }
+        } else {
+          const onCron = normalizeCron(onRule.cron_expression)
+          const offCron = normalizeCron(offRule.cron_expression)
+          canActivate = onCron.length > 0 && offCron.length > 0 && onCron !== offCron
+          if (!canActivate) {
+            reason = 'Cặp SCHEDULE không hợp lệ: ON/OFF bị trùng lịch.'
+          }
+        }
+      }
+
+      for (const rule of group) {
+        diagnostics[rule.id] = {
+          canActivate,
+          reason: !canActivate
+            ? reason
+            : bothInactive
+              ? 'Rule đang tắt theo cặp ON/OFF.'
+              : null,
+        }
+      }
+    }
+
+    return diagnostics
+  }
+
+  const diagnosticsByRuleId = buildRuleDiagnostics(rules)
+
+  const getRuleHint = (rule: RuleResponse) => diagnosticsByRuleId[rule.id]?.reason ?? null
+
+  const isToggleBlocked = (rule: RuleResponse) => {
+    if (rule.is_active) return false
+    const diagnostic = diagnosticsByRuleId[rule.id]
+    return diagnostic ? !diagnostic.canActivate : false
   }
 
   const renderCondition = (rule: RuleResponse) => {
@@ -142,7 +239,14 @@ export default function RulesTab({ farmId, devices }: RulesTabProps) {
                         }`}>
                         {rule.rule_type === 'CONDITION' ? 'sensors' : 'schedule'}
                       </span>
-                      <span className="font-semibold text-on-surface text-sm">{rule.rule_name}</span>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-on-surface text-sm">{rule.rule_name}</span>
+                        {getRuleHint(rule) && (
+                          <span className={`text-xs mt-0.5 ${isToggleBlocked(rule) ? 'text-error' : 'text-on-surface-variant'}`}>
+                            {getRuleHint(rule)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-on-surface-variant">{renderCondition(rule)}</td>
@@ -152,7 +256,12 @@ export default function RulesTab({ farmId, devices }: RulesTabProps) {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <RuleToggleSwitch rule={rule} onUpdate={fetchRules} />
+                    <RuleToggleSwitch
+                      rule={rule}
+                      onUpdate={fetchRules}
+                      disabled={isToggleBlocked(rule)}
+                      disabledReason={isToggleBlocked(rule) ? getRuleHint(rule) : null}
+                    />
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center gap-1 justify-end">

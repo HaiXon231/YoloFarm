@@ -8,6 +8,7 @@ import com.yoloFarm.api.enums.ActionCommandEnum;
 import com.yoloFarm.api.enums.OperatingModeEnum;
 import com.yoloFarm.api.repository.DeviceRepository;
 import com.yoloFarm.api.repository.RuleRepository;
+import com.yoloFarm.api.service.automation.AutomationRuntimeStateService;
 import com.yoloFarm.api.service.NotificationService;
 import com.yoloFarm.api.service.mqtt.MqttSenderService;
 import com.yoloFarm.api.service.mqtt.observer.RuleEngineObserver;
@@ -20,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,16 +44,26 @@ public class RuleEngineLogicTest {
     @Mock
     private NotificationService notificationService;
 
+    private AutomationRuntimeStateService automationRuntimeStateService;
+
     private IrrigationContext irrigationContext;
     private AutoThresholdStrategy autoThresholdStrategy;
     private RuleEngineObserver ruleEngineObserver;
 
     @BeforeEach
     public void setUp() {
-        // 1. Tự tay lắp ráp các hạt nhân Logic (Không cần chạy nguyên cả Server Spring Boot nặng nề)
+        // 1. Tự tay lắp ráp các hạt nhân Logic (Không cần chạy nguyên cả Server Spring
+        // Boot nặng nề)
         autoThresholdStrategy = new AutoThresholdStrategy(deviceRepository, mqttSenderService);
         irrigationContext = new IrrigationContext();
-        ruleEngineObserver = new RuleEngineObserver(ruleRepository, irrigationContext, autoThresholdStrategy, notificationService);
+        automationRuntimeStateService = new AutomationRuntimeStateService();
+        ruleEngineObserver = new RuleEngineObserver(
+                ruleRepository,
+                irrigationContext,
+                autoThresholdStrategy,
+                notificationService,
+                automationRuntimeStateService,
+                Clock.systemUTC());
     }
 
     @Test
@@ -86,7 +98,7 @@ public class RuleEngineLogicTest {
         // Hướng dẫn Mockito: Nếu truy vấn Database bằng sensorId -> Trả về mockRule
         when(ruleRepository.findActiveRulesWithAssociations(sensorId))
                 .thenReturn(List.of(mockRule));
-        
+
         // Hướng dẫn Mockito: Nếu Strategy tìm máy bơm trong Database -> Trả về mockPump
         when(deviceRepository.findById(pumpId))
                 .thenReturn(Optional.of(mockPump));
@@ -97,7 +109,8 @@ public class RuleEngineLogicTest {
         ruleEngineObserver.update(data);
 
         // [KIỂM TRA] - ASSERTION
-        // Khẳng định chắc chắn 100% rằng hệ thống ĐÃ RA LỆNH "ON" ở kênh "pump-feed-01". 
+        // Khẳng định chắc chắn 100% rằng hệ thống ĐÃ RA LỆNH "ON" ở kênh
+        // "pump-feed-01".
         verify(mqttSenderService, times(1)).sendCommand("pump-feed-01", "ON");
     }
 
@@ -110,17 +123,55 @@ public class RuleEngineLogicTest {
         Rule mockRule = new Rule();
         mockRule.setOperator("<");
         mockRule.setThresholdValue(40.0f);
-        
+
         when(ruleRepository.findActiveRulesWithAssociations(sensorId))
                 .thenReturn(List.of(mockRule));
-        
+
         // [THỰC THI]
-        // Đóng vai Cảm biến gửi về độ ẩm = 50.0 (Lớn hơn 40 -> Không cần tưới, đất vẫn ẩm)
+        // Đóng vai Cảm biến gửi về độ ẩm = 50.0 (Lớn hơn 40 -> Không cần tưới, đất vẫn
+        // ẩm)
         SensorData data = new SensorData(farmId, sensorId, "SOIL_MOISTURE", 50.0f, Instant.now());
         ruleEngineObserver.update(data);
-        
+
         // [KIỂM TRA]
         // Khẳng định hàm gửi lệnh của MqttSender KHÔNG BAO GIỜ bị gọi.
         verify(mqttSenderService, never()).sendCommand(any(), any());
+    }
+
+    @Test
+    public void testRuleEngineSkipsOnWhenActuatorAlreadyOn() {
+        UUID sensorId = UUID.randomUUID();
+        UUID pumpId = UUID.randomUUID();
+        UUID farmId = UUID.randomUUID();
+
+        Device mockPump = new Device();
+        mockPump.setId(pumpId);
+        mockPump.setOperatingMode(OperatingModeEnum.AUTO);
+        mockPump.setAdafruitFeedKey("pump-feed-01");
+        mockPump.setIsActive(true);
+
+        com.yoloFarm.api.entity.User mockUser = new com.yoloFarm.api.entity.User();
+        mockUser.setId(UUID.randomUUID());
+
+        Farm mockFarm = new Farm();
+        mockFarm.setId(farmId);
+        mockFarm.setOwner(mockUser);
+
+        Rule mockRule = new Rule();
+        mockRule.setId(UUID.randomUUID());
+        mockRule.setFarm(mockFarm);
+        mockRule.setActionDevice(mockPump);
+        mockRule.setOperator("<");
+        mockRule.setThresholdValue(40.0f);
+        mockRule.setActionCommand(ActionCommandEnum.ON);
+
+        when(ruleRepository.findActiveRulesWithAssociations(sensorId))
+                .thenReturn(List.of(mockRule));
+
+        SensorData data = new SensorData(farmId, sensorId, "SOIL_MOISTURE", 35.5f, Instant.now());
+        ruleEngineObserver.update(data);
+
+        verify(mqttSenderService, never()).sendCommand(any(), any());
+        verify(notificationService, never()).createSystemNotification(any(), any());
     }
 }

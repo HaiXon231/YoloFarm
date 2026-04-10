@@ -38,6 +38,9 @@ public class ScheduledStrategy implements IrrigationStrategy {
 
         mqttSenderService.sendCommand(adafruitFeedKey, command);
 
+        device.setIsActive("ON".equalsIgnoreCase(command));
+        deviceRepository.save(device);
+
         log.info("Đã gửi lệnh {} tự động (Theo Lịch Trình) cho thiết bị {}", command, deviceId);
         return true;
     }

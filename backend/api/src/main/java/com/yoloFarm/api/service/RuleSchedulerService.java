@@ -3,6 +3,7 @@ package com.yoloFarm.api.service;
 import com.yoloFarm.api.entity.Rule;
 import com.yoloFarm.api.enums.RuleTypeEnum;
 import com.yoloFarm.api.repository.RuleRepository;
+import com.yoloFarm.api.service.automation.AutomationRuntimeStateService;
 import com.yoloFarm.api.service.strategy.IrrigationContext;
 import com.yoloFarm.api.service.strategy.ScheduledStrategy;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
 import java.util.List;
 
 @Service
@@ -23,6 +25,8 @@ public class RuleSchedulerService {
     private final IrrigationContext irrigationContext;
     private final ScheduledStrategy scheduledStrategy;
     private final NotificationService notificationService;
+    private final AutomationRuntimeStateService automationRuntimeStateService;
+    private final Clock clock;
 
     /**
      * Chạy mỗi phút (giây 0) để kiểm tra các luật theo lịch trình.
@@ -59,6 +63,11 @@ public class RuleSchedulerService {
                             rule.getActionCommand().name());
 
                     if (success) {
+                        automationRuntimeStateService.markAutoCommand(
+                                rule.getActionDevice().getId(),
+                                rule.getActionCommand().name(),
+                                clock.instant());
+
                         String msg = String.format("Hệ thống tự động (Hẹn giờ): Đã %s [%s] theo luật [%s]",
                                 rule.getActionCommand().name(),
                                 rule.getActionDevice().getName(),

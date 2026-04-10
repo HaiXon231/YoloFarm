@@ -28,3 +28,7 @@ adafruit:
 app:
   websocket:
     allowed-origins: ${WS_ALLOWED_ORIGINS:http://localhost:3000}
+  automation:
+    rule-command-cooldown-seconds: ${AUTOMATION_RULE_COOLDOWN_SECONDS:30}
+    max-auto-on-minutes: ${AUTOMATION_MAX_AUTO_ON_MINUTES:20}
+    auto-off-watchdog-interval-ms: ${AUTOMATION_AUTO_OFF_WATCHDOG_INTERVAL_MS:30000}

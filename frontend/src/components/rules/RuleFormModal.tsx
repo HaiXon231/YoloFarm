@@ -143,8 +143,8 @@ export default function RuleFormModal({ isOpen, onClose, farmId, devices, rule, 
               type="button"
               onClick={() => setRuleType('CONDITION')}
               className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${ruleType === 'CONDITION'
-                  ? 'bg-surface-container-lowest text-primary shadow-card'
-                  : 'text-on-surface-variant hover:text-on-surface'
+                ? 'bg-surface-container-lowest text-primary shadow-card'
+                : 'text-on-surface-variant hover:text-on-surface'
                 }`}
             >
               <span className="material-symbols-outlined text-sm align-middle mr-1">sensors</span>
@@ -154,13 +154,19 @@ export default function RuleFormModal({ isOpen, onClose, farmId, devices, rule, 
               type="button"
               onClick={() => setRuleType('SCHEDULE')}
               className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${ruleType === 'SCHEDULE'
-                  ? 'bg-surface-container-lowest text-primary shadow-card'
-                  : 'text-on-surface-variant hover:text-on-surface'
+                ? 'bg-surface-container-lowest text-primary shadow-card'
+                : 'text-on-surface-variant hover:text-on-surface'
                 }`}
             >
               <span className="material-symbols-outlined text-sm align-middle mr-1">schedule</span>
               Theo lịch trình
             </button>
+          </div>
+          <div className="mt-2 px-3 py-2 rounded-lg bg-primary-container/10 border border-primary/20 text-xs text-on-surface-variant">
+            Rule chỉ hoạt động khi có đủ cặp ON/OFF cho cùng thiết bị điều khiển.
+            {ruleType === 'CONDITION'
+              ? ' Với CONDITION, cặp ON/OFF phải cùng cảm biến và ngưỡng không mâu thuẫn.'
+              : ' Với SCHEDULE, lịch ON và OFF không được trùng nhau.'}
           </div>
         </div>
 
@@ -266,8 +272,8 @@ export default function RuleFormModal({ isOpen, onClose, farmId, devices, rule, 
                 type="button"
                 onClick={() => setActionCommand('ON')}
                 className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${actionCommand === 'ON'
-                    ? 'bg-primary text-white'
-                    : 'bg-surface-container-low text-on-surface-variant'
+                  ? 'bg-primary text-white'
+                  : 'bg-surface-container-low text-on-surface-variant'
                   }`}
               >
                 BẬT (ON)
@@ -276,8 +282,8 @@ export default function RuleFormModal({ isOpen, onClose, farmId, devices, rule, 
                 type="button"
                 onClick={() => setActionCommand('OFF')}
                 className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${actionCommand === 'OFF'
-                    ? 'bg-on-surface text-white'
-                    : 'bg-surface-container-low text-on-surface-variant'
+                  ? 'bg-on-surface text-white'
+                  : 'bg-surface-container-low text-on-surface-variant'
                   }`}
               >
                 TẮT (OFF)

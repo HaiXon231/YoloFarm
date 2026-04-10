@@ -5,22 +5,28 @@ import com.yoloFarm.api.dto.response.RuleResponse;
 import com.yoloFarm.api.entity.Device;
 import com.yoloFarm.api.entity.Farm;
 import com.yoloFarm.api.entity.Rule;
+import com.yoloFarm.api.enums.RuleTypeEnum;
 import com.yoloFarm.api.repository.DeviceRepository;
 import com.yoloFarm.api.repository.FarmRepository;
 import com.yoloFarm.api.repository.RuleRepository;
+import com.yoloFarm.api.enums.ActionCommandEnum;
+import com.yoloFarm.api.enums.OperatingModeEnum;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class RuleService {
@@ -79,10 +85,11 @@ public class RuleService {
                 .cronExpression(cronExpression)
                 .actionDevice(actionDevice)
                 .actionCommand(request.getActionCommand())
-                .isActive(true)
+                .isActive(false)
                 .build();
 
         rule = ruleRepository.save(rule);
+        rule = syncPairActivationAfterUpsert(rule);
         return mapToResponse(rule);
     }
 
@@ -102,6 +109,24 @@ public class RuleService {
         Rule rule = ruleRepository.findByIdAndFarmOwnerId(ruleId, ownerId)
                 .orElseThrow(() -> new EntityNotFoundException("Rule not found with id: " + ruleId));
 
+        Optional<Rule> complementaryOpt = findComplementaryRule(rule);
+        if (isActive) {
+            Rule complementaryRule = complementaryOpt.orElseThrow(
+                    () -> new IllegalStateException(
+                            "Rule chỉ được bật khi đã có cặp ON và OFF cho cùng action device."));
+            validatePairLogic(rule, complementaryRule);
+
+            rule.setIsActive(true);
+            complementaryRule.setIsActive(true);
+            ruleRepository.save(complementaryRule);
+        } else if (complementaryOpt.isPresent()) {
+            Rule complementaryRule = complementaryOpt.get();
+            if (Boolean.TRUE.equals(complementaryRule.getIsActive())) {
+                complementaryRule.setIsActive(false);
+                ruleRepository.save(complementaryRule);
+            }
+        }
+
         rule.setIsActive(isActive);
         rule = ruleRepository.save(rule);
         return mapToResponse(rule);
@@ -111,7 +136,29 @@ public class RuleService {
     public void deleteRule(UUID ruleId, UUID ownerId) {
         Rule rule = ruleRepository.findByIdAndFarmOwnerId(ruleId, ownerId)
                 .orElseThrow(() -> new EntityNotFoundException("Rule not found with id: " + ruleId));
+
+        Device actionDevice = rule.getActionDevice();
+        boolean deletedRuleWasActive = Boolean.TRUE.equals(rule.getIsActive());
+
         ruleRepository.delete(rule);
+
+        if (actionDevice == null || actionDevice.getId() == null || !deletedRuleWasActive) {
+            return;
+        }
+
+        boolean hasRemainingActiveRules = ruleRepository.existsByActionDeviceIdAndIsActiveTrue(actionDevice.getId());
+        if (hasRemainingActiveRules) {
+            return;
+        }
+
+        if (actionDevice.getOperatingMode() == OperatingModeEnum.MANUAL) {
+            return;
+        }
+
+        actionDevice.setOperatingMode(OperatingModeEnum.MANUAL);
+        deviceRepository.save(actionDevice);
+        log.info("RuleService: Action device {} được chuyển về MANUAL vì đã xóa rule active cuối cùng.",
+                actionDevice.getId());
     }
 
     @Transactional
@@ -164,7 +211,140 @@ public class RuleService {
         existing.setActionDevice(actionDevice);
         existing.setActionCommand(request.getActionCommand());
 
-        return mapToResponse(ruleRepository.save(existing));
+        existing = ruleRepository.save(existing);
+        existing = syncPairActivationAfterUpsert(existing);
+        return mapToResponse(existing);
+    }
+
+    private Rule syncPairActivationAfterUpsert(Rule rule) {
+        Optional<Rule> complementaryOpt = findComplementaryRule(rule);
+        if (complementaryOpt.isEmpty()) {
+            if (Boolean.TRUE.equals(rule.getIsActive())) {
+                rule.setIsActive(false);
+                rule = ruleRepository.save(rule);
+            }
+            log.info("RuleService: Rule {} '{}' được đặt inactive vì chưa có cặp ON/OFF.",
+                    rule.getRuleType(), rule.getRuleName());
+            return rule;
+        }
+
+        Rule complementaryRule = complementaryOpt.get();
+        validatePairLogic(rule, complementaryRule);
+
+        if (!Boolean.TRUE.equals(complementaryRule.getIsActive())) {
+            complementaryRule.setIsActive(true);
+            ruleRepository.save(complementaryRule);
+        }
+        if (!Boolean.TRUE.equals(rule.getIsActive())) {
+            rule.setIsActive(true);
+            rule = ruleRepository.save(rule);
+        }
+
+        return rule;
+    }
+
+    private Optional<Rule> findComplementaryRule(Rule rule) {
+        ActionCommandEnum complementaryCommand = complementaryCommand(rule.getActionCommand());
+        List<Rule> candidates;
+
+        if (rule.getRuleType() == RuleTypeEnum.CONDITION) {
+            if (rule.getTriggerDevice() == null || rule.getTriggerDevice().getId() == null) {
+                throw new IllegalStateException("Rule CONDITION thiếu trigger device để ghép cặp ON/OFF.");
+            }
+            candidates = ruleRepository.findByFarmIdAndActionDeviceIdAndTriggerDeviceIdAndRuleTypeAndActionCommand(
+                    rule.getFarm().getId(),
+                    rule.getActionDevice().getId(),
+                    rule.getTriggerDevice().getId(),
+                    RuleTypeEnum.CONDITION,
+                    complementaryCommand);
+        } else {
+            candidates = ruleRepository.findByFarmIdAndActionDeviceIdAndRuleTypeAndActionCommand(
+                    rule.getFarm().getId(),
+                    rule.getActionDevice().getId(),
+                    RuleTypeEnum.SCHEDULE,
+                    complementaryCommand);
+        }
+
+        List<Rule> filtered = candidates.stream()
+                .filter(candidate -> !candidate.getId().equals(rule.getId()))
+                .collect(Collectors.toList());
+
+        if (filtered.isEmpty()) {
+            return Optional.empty();
+        }
+        if (filtered.size() > 1) {
+            throw new IllegalStateException(
+                    "Có nhiều rule đối ứng ON/OFF. Vui lòng giữ một cặp rule rõ ràng cho từng luồng tự động.");
+        }
+
+        return Optional.of(filtered.get(0));
+    }
+
+    private void validatePairLogic(Rule rule, Rule complementaryRule) {
+        if (rule.getRuleType() == RuleTypeEnum.CONDITION) {
+            validateConditionPairLogic(rule, complementaryRule);
+            return;
+        }
+        validateSchedulePairLogic(rule, complementaryRule);
+    }
+
+    private void validateConditionPairLogic(Rule rule, Rule complementaryRule) {
+        Rule onRule = rule.getActionCommand() == ActionCommandEnum.ON ? rule : complementaryRule;
+        Rule offRule = rule.getActionCommand() == ActionCommandEnum.OFF ? rule : complementaryRule;
+
+        String onOperator = normalizeOperator(onRule.getOperator());
+        String offOperator = normalizeOperator(offRule.getOperator());
+        Float onThreshold = onRule.getThresholdValue();
+        Float offThreshold = offRule.getThresholdValue();
+
+        if (onThreshold == null || offThreshold == null) {
+            throw new IllegalStateException("Rule CONDITION thiếu threshold để ghép cặp ON/OFF hợp lệ.");
+        }
+
+        boolean onByLow = isLowOperator(onOperator);
+        boolean onByHigh = isHighOperator(onOperator);
+        boolean offByLow = isLowOperator(offOperator);
+        boolean offByHigh = isHighOperator(offOperator);
+
+        boolean validLowToHigh = onByLow && offByHigh && onThreshold < offThreshold;
+        boolean validHighToLow = onByHigh && offByLow && offThreshold < onThreshold;
+
+        if (!validLowToHigh && !validHighToLow) {
+            throw new IllegalStateException(
+                    "Cặp rule CONDITION không hợp lệ. Cần dạng hysteresis: ON(< ngưỡng thấp) + OFF(> ngưỡng cao) hoặc ngược lại.");
+        }
+    }
+
+    private void validateSchedulePairLogic(Rule rule, Rule complementaryRule) {
+        String cronA = normalizeCronExpression(rule.getCronExpression());
+        String cronB = normalizeCronExpression(complementaryRule.getCronExpression());
+
+        if (cronA.equals(cronB)) {
+            throw new IllegalStateException(
+                    "Cặp rule SCHEDULE không hợp lệ: ON và OFF không được trùng cùng một lịch chạy.");
+        }
+    }
+
+    private ActionCommandEnum complementaryCommand(ActionCommandEnum actionCommand) {
+        ActionCommandEnum complementary = actionCommand == ActionCommandEnum.ON
+                ? ActionCommandEnum.OFF
+                : ActionCommandEnum.ON;
+        return complementary;
+    }
+
+    private String normalizeOperator(String operator) {
+        if (operator == null) {
+            return "";
+        }
+        return operator.trim();
+    }
+
+    private boolean isLowOperator(String operator) {
+        return "<".equals(operator) || "<=".equals(operator);
+    }
+
+    private boolean isHighOperator(String operator) {
+        return ">".equals(operator) || ">=".equals(operator);
     }
 
     private RuleResponse mapToResponse(Rule rule) {
