@@ -8,8 +8,11 @@ import com.yoloFarm.api.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,6 +26,7 @@ public class NotificationService {
 
 	private final NotificationRepository notificationRepository;
 	private final UserRepository userRepository;
+	private final SimpMessagingTemplate messagingTemplate;
 
 	public List<NotificationResponse> getNotifications(UUID userId, int page, int size) {
 		int safePage = Math.max(page - 1, 0);
@@ -42,12 +46,17 @@ public class NotificationService {
 		Notification notification = notificationRepository.findByIdAndUserId(notificationId, userId)
 				.orElseThrow(() -> new EntityNotFoundException("Notification not found with id: " + notificationId));
 		notification.setIsRead(true);
-		return mapToResponse(notificationRepository.save(notification));
+		Notification saved = notificationRepository.save(notification);
+		publishUnreadCountAfterCommit(saved.getUser().getId(), saved.getUser().getUsername());
+		return mapToResponse(saved);
 	}
 
 	@Transactional
 	public int markAllAsRead(UUID userId) {
-		return notificationRepository.markAllAsReadByUserId(userId);
+		int updatedCount = notificationRepository.markAllAsReadByUserId(userId);
+		userRepository.findById(userId)
+				.ifPresent(user -> publishUnreadCountAfterCommit(user.getId(), user.getUsername()));
+		return updatedCount;
 	}
 
 	@Transactional
@@ -62,6 +71,30 @@ public class NotificationService {
 				.createdAt(LocalDateTime.now())
 				.build();
 		notificationRepository.save(notification);
+		publishUnreadCountAfterCommit(user.getId(), user.getUsername());
+	}
+
+	private void publishUnreadCountAfterCommit(UUID userId, String username) {
+		Runnable publisher = () -> {
+			long unreadCount = notificationRepository.countUnreadByUserId(userId);
+			messagingTemplate.convertAndSendToUser(
+					username,
+					"/queue/notifications-unread",
+					java.util.Map.of("unread_count", unreadCount));
+		};
+
+		if (TransactionSynchronizationManager.isActualTransactionActive()
+				&& TransactionSynchronizationManager.isSynchronizationActive()) {
+			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+				@Override
+				public void afterCommit() {
+					publisher.run();
+				}
+			});
+			return;
+		}
+
+		publisher.run();
 	}
 
 	private NotificationResponse mapToResponse(Notification notification) {

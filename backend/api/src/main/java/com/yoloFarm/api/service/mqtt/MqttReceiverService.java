@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -22,6 +23,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @Slf4j
@@ -37,10 +39,29 @@ public class MqttReceiverService implements Subject {
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
     private final AtomicBoolean subscribed = new AtomicBoolean(false);
 
+    private static final int OBSERVER_CORE_THREADS = 4;
+    private static final int OBSERVER_MAX_THREADS = 8;
+    private static final int OBSERVER_QUEUE_CAPACITY = 1000;
+    private static final AtomicInteger OBSERVER_THREAD_COUNTER = new AtomicInteger(1);
+
+    private final java.util.concurrent.ThreadPoolExecutor observerExecutor = new java.util.concurrent.ThreadPoolExecutor(
+            OBSERVER_CORE_THREADS,
+            OBSERVER_MAX_THREADS,
+            60L,
+            java.util.concurrent.TimeUnit.SECONDS,
+            new java.util.concurrent.LinkedBlockingQueue<>(OBSERVER_QUEUE_CAPACITY),
+            runnable -> {
+                Thread thread = new Thread(runnable,
+                        "mqtt-observer-" + OBSERVER_THREAD_COUNTER.getAndIncrement());
+                thread.setDaemon(true);
+                return thread;
+            },
+            new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
+
     // Cache feed key → Device để tránh query DB lặp lại mỗi MQTT message
-    // ConcurrentHashMap an toàn cho multi-thread (MQTT callback + ApproveDevice concurrent)
-    private final java.util.concurrent.ConcurrentHashMap<String, Device> feedKeyCache
-            = new java.util.concurrent.ConcurrentHashMap<>();
+    // ConcurrentHashMap an toàn cho multi-thread (MQTT callback + ApproveDevice
+    // concurrent)
+    private final java.util.concurrent.ConcurrentHashMap<String, Device> feedKeyCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Value("${adafruit.mqtt.username}")
     private String username;
@@ -88,17 +109,31 @@ public class MqttReceiverService implements Subject {
     @Override
     public void notifyObservers(SensorData data) {
         for (Observer observer : observers) {
-            // Mỗi observer chạy trên thread riêng của JVM thread pool
-            // MQTT callback thread được giải phóng ngay lập tức
-            java.util.concurrent.CompletableFuture.runAsync(() -> {
+            // Chạy observer trên bounded executor để tránh bùng nổ task ở common pool.
+            try {
+                observerExecutor.execute(() -> {
+                    try {
+                        observer.update(data);
+                    } catch (Exception e) {
+                        log.error("MqttReceiver: Observer [{}] gặp lỗi khi xử lý SensorData",
+                                observer.getClass().getSimpleName(), e);
+                    }
+                });
+            } catch (java.util.concurrent.RejectedExecutionException ex) {
+                log.warn("MqttReceiver: Queue observer đầy, fallback chạy trực tiếp trên callback thread.");
                 try {
                     observer.update(data);
                 } catch (Exception e) {
                     log.error("MqttReceiver: Observer [{}] gặp lỗi khi xử lý SensorData",
                             observer.getClass().getSimpleName(), e);
                 }
-            });
+            }
         }
+    }
+
+    @PreDestroy
+    public void shutdownObserverExecutor() {
+        observerExecutor.shutdown();
     }
 
     public void messageArrived(String topic, MqttMessage message) {
@@ -122,27 +157,27 @@ public class MqttReceiverService implements Subject {
                 Device device = deviceOpt.get();
                 Float metricValue = Float.parseFloat(payload);
 
-                // Phát hiện chuyển trạng thái OFFLINE → ONLINE để push WS (chỉ khi thực sự thay đổi)
+                // Phát hiện chuyển trạng thái OFFLINE → ONLINE để push WS (chỉ khi thực sự thay
+                // đổi)
                 boolean wasOffline = device.getConnectionStatus() != com.yoloFarm.api.enums.ConnectionStatusEnum.ONLINE;
 
-                // Thay vì dùng deviceRepository.save(device) làm dính trấu Hibernate Detached LazyException
+                // Thay vì dùng deviceRepository.save(device) làm dính trấu Hibernate Detached
+                // LazyException
                 // Ta chọc thẳng UPDATE Query cực nhanh và an toàn tuyệt đối.
                 device.setConnectionStatus(com.yoloFarm.api.enums.ConnectionStatusEnum.ONLINE);
                 device.setLastSeen(java.time.LocalDateTime.now());
-                jdbcTemplate.update("UPDATE devices SET connection_status = 'ONLINE', last_seen = ? WHERE id = ?", 
+                jdbcTemplate.update("UPDATE devices SET connection_status = 'ONLINE', last_seen = ? WHERE id = ?",
                         java.sql.Timestamp.valueOf(device.getLastSeen()), device.getId());
 
                 // Push WebSocket event khi thiết bị vừa quay lại ONLINE
                 if (wasOffline) {
-                    java.util.List<java.util.Map<String, Object>> onlinePayload =
-                            java.util.List.of(java.util.Map.<String, Object>of(
+                    java.util.List<java.util.Map<String, Object>> onlinePayload = java.util.List
+                            .of(java.util.Map.<String, Object>of(
                                     "deviceId", device.getId().toString(),
-                                    "connectionStatus", "ONLINE"
-                            ));
+                                    "connectionStatus", "ONLINE"));
                     messagingTemplate.convertAndSend(
                             "/topic/farm/" + device.getFarm().getId() + "/device-status",
-                            (Object) onlinePayload
-                    );
+                            (Object) onlinePayload);
                     messagingTemplate.convertAndSend("/topic/admin/stats-changed",
                             (Object) java.util.Map.of("reason", "device_online"));
                     log.info("MqttReceiver: Device [{}] vừa kết nối lại ONLINE.", device.getId());

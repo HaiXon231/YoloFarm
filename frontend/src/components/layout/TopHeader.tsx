@@ -3,6 +3,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import { useAuthStore } from '@/stores/authStore'
 import { useNotificationStore } from '@/stores/notificationStore'
+import { connectNotificationUnread, disconnectNotificationUnread } from '@/lib/websocket'
 
 export default function TopHeader() {
   const { user } = useAuthStore()
@@ -16,6 +17,7 @@ export default function TopHeader() {
     isMarkingAll,
     fetchNotifications,
     fetchUnreadCount,
+    setUnreadCount,
     loadMoreNotifications,
     markAsRead,
     markAllAsRead,
@@ -36,16 +38,14 @@ export default function TopHeader() {
     }
   }, [isOpen, fetchNotifications])
 
-  // Keep bell badge in sync with server unread count.
+  // Keep bell badge in sync via WebSocket push instead of polling every 30s.
   useEffect(() => {
     fetchUnreadCount()
-
-    const intervalId = window.setInterval(() => {
-      fetchUnreadCount()
-    }, 30000)
-
-    return () => window.clearInterval(intervalId)
-  }, [fetchUnreadCount])
+    connectNotificationUnread((count) => {
+      setUnreadCount(count)
+    })
+    return () => disconnectNotificationUnread()
+  }, [fetchUnreadCount, setUnreadCount])
 
   // Close panel on click outside
   useEffect(() => {

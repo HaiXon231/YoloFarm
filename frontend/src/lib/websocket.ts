@@ -11,6 +11,7 @@ export type DeviceStatusEvent = {
 
 type DeviceStatusCallback = (events: DeviceStatusEvent[]) => void
 type AdminStatsChangedCallback = () => void
+type NotificationUnreadCallback = (unreadCount: number) => void
 
 type RawTelemetryMessage = Partial<TelemetryMessage> & {
   device_id?: string
@@ -19,6 +20,7 @@ type RawTelemetryMessage = Partial<TelemetryMessage> & {
 
 let stompClient: Client | null = null
 let adminStompClient: Client | null = null
+let notificationStompClient: Client | null = null
 
 function normalizeTelemetryMessage(raw: RawTelemetryMessage): TelemetryMessage | null {
   const deviceId = raw.deviceId ?? raw.device_id
@@ -147,6 +149,50 @@ export function disconnectAdminStats(): void {
     console.log('[WebSocket] Admin stats disconnected')
   }
   adminStompClient = null
+}
+
+/** Kết nối WebSocket để nhận unread notification count theo user, thay cho polling 30s. */
+export function connectNotificationUnread(onUnreadChanged: NotificationUnreadCallback): void {
+  if (notificationStompClient?.active) {
+    notificationStompClient.deactivate()
+  }
+
+  const token = localStorage.getItem('access_token')
+
+  notificationStompClient = new Client({
+    webSocketFactory: () => new SockJS('/ws'),
+    connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+    reconnectDelay: 10000,
+    heartbeatIncoming: 30000,
+    heartbeatOutgoing: 30000,
+    onConnect: () => {
+      console.log('[WebSocket] Notification unread connected')
+      notificationStompClient?.subscribe('/user/queue/notifications-unread', (message) => {
+        try {
+          const payload = JSON.parse(message.body) as { unread_count?: number; unreadCount?: number }
+          const unread = payload.unread_count ?? payload.unreadCount
+          if (typeof unread === 'number') {
+            onUnreadChanged(unread)
+          }
+        } catch (err) {
+          console.error('[WebSocket] Failed to parse notifications-unread:', err)
+        }
+      })
+    },
+    onStompError: (frame) => {
+      console.warn('[WebSocket] Notification STOMP error:', frame.headers.message)
+    },
+  })
+
+  notificationStompClient.activate()
+}
+
+export function disconnectNotificationUnread(): void {
+  if (notificationStompClient?.active) {
+    notificationStompClient.deactivate()
+    console.log('[WebSocket] Notification unread disconnected')
+  }
+  notificationStompClient = null
 }
 
 export function disconnectWebSocket(): void {

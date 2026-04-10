@@ -16,7 +16,6 @@ import com.yoloFarm.api.repository.RuleRepository;
 import com.yoloFarm.api.service.mqtt.MqttReceiverService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.AccessDeniedException;
@@ -43,11 +42,8 @@ public class DeviceService {
     private final NotificationService notificationService;
     private final AdafruitApiService adafruitApiService;
     private final JdbcTemplate jdbcTemplate;
-
-    // @Lazy để tránh circular dependency: DeviceService → MqttReceiverService → (không còn vòng lặp)
     @Lazy
-    @Autowired
-    private MqttReceiverService mqttReceiverService;
+    private final MqttReceiverService mqttReceiverService;
 
     @Transactional(readOnly = true)
     public List<DeviceResponse> getDevicesByFarmId(UUID farmId, UUID ownerId) {
@@ -180,9 +176,11 @@ public class DeviceService {
         device.setStatus(DeviceStatusEnum.ACTIVE);
         Device saved = deviceRepository.save(device);
 
-        // Xóa cache (nếu có) để lần nhận tin nhắn tới nó tự load lại bằng Query chuẩn (JOIN FETCH model & farm)
-        // Tuyệt đối không nhét đối tượng 'saved' vào RAM Cache vì nó đang dính Lazy proxy (chưa được fetch full)
-        mqttReceiverService.evictFeedKeyCache(resolvedFeedKey);
+        // Xóa cache (nếu có) để lần nhận tin nhắn tới nó tự load lại bằng Query chuẩn
+        // (JOIN FETCH model & farm)
+        // Tuyệt đối không nhét đối tượng 'saved' vào RAM Cache vì nó đang dính Lazy
+        // proxy (chưa được fetch full)
+        evictFeedKeyCacheSafe(resolvedFeedKey);
 
         // Bắn tín hiệu NOTIFY xuống Postgres để Python Simulator chạy ngay lập tức
         jdbcTemplate.execute("NOTIFY device_events, 'approve'");
@@ -252,19 +250,24 @@ public class DeviceService {
     }
 
     private List<String> deleteDeviceAndCleanup(Device device, boolean deleteAdafruitFeed) {
+        String feedKey = device.getAdafruitFeedKey();
         List<String> removedRuleNames = new java.util.ArrayList<>(
                 new LinkedHashSet<>(ruleRepository.findRuleNamesBoundToDevice(device.getId())));
 
-        if (deleteAdafruitFeed && device.getAdafruitFeedKey() != null && !device.getAdafruitFeedKey().isBlank()) {
-            adafruitApiService.deleteFeed(device.getAdafruitFeedKey());
+        if (deleteAdafruitFeed && feedKey != null && !feedKey.isBlank()) {
+            adafruitApiService.deleteFeed(feedKey);
         }
 
         ruleRepository.deleteRulesBoundToDevice(device.getId());
         deviceRepository.delete(device);
-        
-        // Bắn tín hiệu NOTIFY xuống Postgres để Simulator bỏ lắng nghe thiết bị này ngay
+
+        // Xóa cache feed key để tránh stale mapping sau khi thiết bị đã bị xóa khỏi DB.
+        evictFeedKeyCacheSafe(feedKey);
+
+        // Bắn tín hiệu NOTIFY xuống Postgres để Simulator bỏ lắng nghe thiết bị này
+        // ngay
         jdbcTemplate.execute("NOTIFY device_events, 'remove'");
-        
+
         return removedRuleNames;
     }
 
@@ -299,6 +302,15 @@ public class DeviceService {
         }
 
         return cleaned;
+    }
+
+    private void evictFeedKeyCacheSafe(String feedKey) {
+        if (feedKey == null || feedKey.isBlank()) {
+            return;
+        }
+        if (mqttReceiverService != null) {
+            mqttReceiverService.evictFeedKeyCache(feedKey);
+        }
     }
 
     private void assertFeedKeyAvailable(UUID currentDeviceId, String feedKey) {

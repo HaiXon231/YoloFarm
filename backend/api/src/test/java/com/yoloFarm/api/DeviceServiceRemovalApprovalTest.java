@@ -18,6 +18,7 @@ import com.yoloFarm.api.repository.RuleRepository;
 import com.yoloFarm.api.service.AdafruitApiService;
 import com.yoloFarm.api.service.DeviceService;
 import com.yoloFarm.api.service.NotificationService;
+import com.yoloFarm.api.service.mqtt.MqttReceiverService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,124 +42,130 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class DeviceServiceRemovalApprovalTest {
 
-    @Mock
-    private DeviceRepository deviceRepository;
+        @Mock
+        private DeviceRepository deviceRepository;
 
-    @Mock
-    private FarmRepository farmRepository;
+        @Mock
+        private FarmRepository farmRepository;
 
-    @Mock
-    private DeviceModelRepository deviceModelRepository;
+        @Mock
+        private DeviceModelRepository deviceModelRepository;
 
-    @Mock
-    private RuleRepository ruleRepository;
+        @Mock
+        private RuleRepository ruleRepository;
 
-    @Mock
-    private NotificationService notificationService;
+        @Mock
+        private NotificationService notificationService;
 
-    @Mock
-    private AdafruitApiService adafruitApiService;
+        @Mock
+        private AdafruitApiService adafruitApiService;
 
-    @Mock
-    private JdbcTemplate jdbcTemplate;
+        @Mock
+        private JdbcTemplate jdbcTemplate;
 
-    @InjectMocks
-    private DeviceService deviceService;
+        @Mock
+        private MqttReceiverService mqttReceiverService;
 
-    private UUID ownerId;
-    private UUID deviceId;
+        @InjectMocks
+        private DeviceService deviceService;
 
-    @BeforeEach
-    void setUp() {
-        ownerId = UUID.randomUUID();
-        deviceId = UUID.randomUUID();
-    }
+        private UUID ownerId;
+        private UUID deviceId;
 
-    @Test
-    void approveRemovalShouldDeleteFeedDeviceAndNotifyRemovedRules() {
-        Device device = buildPendingRemovalDevice("Máy bơm zone A", "pump-zone-a");
+        @BeforeEach
+        void setUp() {
+                ownerId = UUID.randomUUID();
+                deviceId = UUID.randomUUID();
+        }
 
-        when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(device));
-        when(ruleRepository.findRuleNamesBoundToDevice(deviceId))
-                .thenReturn(List.of("Tưới sáng", "Bật bơm khi nóng", "Tưới sáng"));
+        @Test
+        void approveRemovalShouldDeleteFeedDeviceAndNotifyRemovedRules() {
+                Device device = buildPendingRemovalDevice("Máy bơm zone A", "pump-zone-a");
 
-        DeviceResponse response = deviceService.approveDevice(deviceId, null);
+                when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(device));
+                when(ruleRepository.findRuleNamesBoundToDevice(deviceId))
+                                .thenReturn(List.of("Tưới sáng", "Bật bơm khi nóng", "Tưới sáng"));
 
-        assertEquals(DeviceStatusEnum.PENDING_REMOVAL, response.getStatus());
-        verify(adafruitApiService).deleteFeed("pump-zone-a");
-        verify(ruleRepository).deleteRulesBoundToDevice(deviceId);
-        verify(deviceRepository).delete(device);
+                DeviceResponse response = deviceService.approveDevice(deviceId, null);
 
-        verify(notificationService, times(2)).createSystemNotification(eq(ownerId), any(String.class));
-        verify(notificationService).createSystemNotification(eq(ownerId),
-                eq("Yêu cầu gỡ bỏ thiết bị [Máy bơm zone A] đã được duyệt. Thiết bị đã được thu hồi khỏi hệ thống."));
-        verify(notificationService).createSystemNotification(eq(ownerId),
-                eq("Các rule liên quan đến thiết bị [Máy bơm zone A] đã bị xóa theo: Tưới sáng, Bật bơm khi nóng."));
-    }
+                assertEquals(DeviceStatusEnum.PENDING_REMOVAL, response.getStatus());
+                verify(adafruitApiService).deleteFeed("pump-zone-a");
+                verify(ruleRepository).deleteRulesBoundToDevice(deviceId);
+                verify(deviceRepository).delete(device);
+                verify(mqttReceiverService).evictFeedKeyCache("pump-zone-a");
 
-    @Test
-    void approveRemovalShouldNotSendRuleRemovedNotificationWhenNoRulesBound() {
-        Device device = buildPendingRemovalDevice("Cảm biến đất", "soil-zone-a");
+                verify(notificationService, times(2)).createSystemNotification(eq(ownerId), any(String.class));
+                verify(notificationService).createSystemNotification(eq(ownerId),
+                                eq("Yêu cầu gỡ bỏ thiết bị [Máy bơm zone A] đã được duyệt. Thiết bị đã được thu hồi khỏi hệ thống."));
+                verify(notificationService).createSystemNotification(eq(ownerId),
+                                eq("Các rule liên quan đến thiết bị [Máy bơm zone A] đã bị xóa theo: Tưới sáng, Bật bơm khi nóng."));
+        }
 
-        when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(device));
-        when(ruleRepository.findRuleNamesBoundToDevice(deviceId)).thenReturn(List.of());
+        @Test
+        void approveRemovalShouldNotSendRuleRemovedNotificationWhenNoRulesBound() {
+                Device device = buildPendingRemovalDevice("Cảm biến đất", "soil-zone-a");
 
-        deviceService.approveDevice(deviceId, null);
+                when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(device));
+                when(ruleRepository.findRuleNamesBoundToDevice(deviceId)).thenReturn(List.of());
 
-        verify(notificationService, times(1)).createSystemNotification(eq(ownerId), any(String.class));
-        verify(notificationService).createSystemNotification(eq(ownerId),
-                eq("Yêu cầu gỡ bỏ thiết bị [Cảm biến đất] đã được duyệt. Thiết bị đã được thu hồi khỏi hệ thống."));
-        verify(adafruitApiService).deleteFeed("soil-zone-a");
-        verify(ruleRepository).deleteRulesBoundToDevice(deviceId);
-        verify(deviceRepository).delete(device);
-    }
+                deviceService.approveDevice(deviceId, null);
 
-    @Test
-    void approveRemovalShouldSkipDeleteFeedWhenFeedKeyMissing() {
-        Device device = buildPendingRemovalDevice("Cảm biến nhiệt", null);
+                verify(notificationService, times(1)).createSystemNotification(eq(ownerId), any(String.class));
+                verify(notificationService).createSystemNotification(eq(ownerId),
+                                eq("Yêu cầu gỡ bỏ thiết bị [Cảm biến đất] đã được duyệt. Thiết bị đã được thu hồi khỏi hệ thống."));
+                verify(adafruitApiService).deleteFeed("soil-zone-a");
+                verify(ruleRepository).deleteRulesBoundToDevice(deviceId);
+                verify(deviceRepository).delete(device);
+                verify(mqttReceiverService).evictFeedKeyCache("soil-zone-a");
+        }
 
-        when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(device));
-        when(ruleRepository.findRuleNamesBoundToDevice(deviceId)).thenReturn(List.of("Rule 1"));
+        @Test
+        void approveRemovalShouldSkipDeleteFeedWhenFeedKeyMissing() {
+                Device device = buildPendingRemovalDevice("Cảm biến nhiệt", null);
 
-        deviceService.approveDevice(deviceId, null);
+                when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(device));
+                when(ruleRepository.findRuleNamesBoundToDevice(deviceId)).thenReturn(List.of("Rule 1"));
 
-        verify(adafruitApiService, never()).deleteFeed(any());
-        verify(ruleRepository).deleteRulesBoundToDevice(deviceId);
-        verify(deviceRepository).delete(device);
-    }
+                deviceService.approveDevice(deviceId, null);
 
-    private Device buildPendingRemovalDevice(String name, String feedKey) {
-        User owner = User.builder()
-                .id(ownerId)
-                .username("farmer")
-                .password("pwd")
-                .email("farmer@yolo.test")
-                .role(RoleEnum.FARMER)
-                .build();
+                verify(adafruitApiService, never()).deleteFeed(any());
+                verify(ruleRepository).deleteRulesBoundToDevice(deviceId);
+                verify(deviceRepository).delete(device);
+                verify(mqttReceiverService, never()).evictFeedKeyCache(any());
+        }
 
-        Farm farm = Farm.builder()
-                .id(UUID.randomUUID())
-                .name("Farm A")
-                .owner(owner)
-                .build();
+        private Device buildPendingRemovalDevice(String name, String feedKey) {
+                User owner = User.builder()
+                                .id(ownerId)
+                                .username("farmer")
+                                .password("pwd")
+                                .email("farmer@yolo.test")
+                                .role(RoleEnum.FARMER)
+                                .build();
 
-        DeviceModel model = DeviceModel.builder()
-                .id(UUID.randomUUID())
-                .modelName("Model A")
-                .deviceType(DeviceTypeEnum.ACTUATOR)
-                .metricType(MetricTypeEnum.PUMP)
-                .build();
+                Farm farm = Farm.builder()
+                                .id(UUID.randomUUID())
+                                .name("Farm A")
+                                .owner(owner)
+                                .build();
 
-        return Device.builder()
-                .id(deviceId)
-                .farm(farm)
-                .model(model)
-                .name(name)
-                .status(DeviceStatusEnum.PENDING_REMOVAL)
-                .connectionStatus(ConnectionStatusEnum.ONLINE)
-                .operatingMode(OperatingModeEnum.AUTO)
-                .adafruitFeedKey(feedKey)
-                .isActive(true)
-                .build();
-    }
+                DeviceModel model = DeviceModel.builder()
+                                .id(UUID.randomUUID())
+                                .modelName("Model A")
+                                .deviceType(DeviceTypeEnum.ACTUATOR)
+                                .metricType(MetricTypeEnum.PUMP)
+                                .build();
+
+                return Device.builder()
+                                .id(deviceId)
+                                .farm(farm)
+                                .model(model)
+                                .name(name)
+                                .status(DeviceStatusEnum.PENDING_REMOVAL)
+                                .connectionStatus(ConnectionStatusEnum.ONLINE)
+                                .operatingMode(OperatingModeEnum.AUTO)
+                                .adafruitFeedKey(feedKey)
+                                .isActive(true)
+                                .build();
+        }
 }

@@ -19,6 +19,7 @@ interface NotificationState {
 
   fetchNotifications: () => Promise<void>
   fetchUnreadCount: () => Promise<void>
+  setUnreadCount: (count: number) => void
   loadMoreNotifications: () => Promise<void>
   markAsRead: (id: string) => Promise<void>
   markAllAsRead: () => Promise<void>
@@ -44,6 +45,10 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     } catch (error) {
       console.error('Failed to fetch unread notification count:', error)
     }
+  },
+
+  setUnreadCount: (count: number) => {
+    set({ unreadCount: Math.max(0, count) })
   },
 
   fetchNotifications: async () => {
