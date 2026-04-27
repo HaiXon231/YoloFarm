@@ -23,6 +23,8 @@ class DeviceInfo:
     device_type: str
     metric_type: str
     is_active: bool = False
+    min_value: Optional[float] = None
+    max_value: Optional[float] = None
 
 
 @dataclass
@@ -97,11 +99,21 @@ class DigitalTwinManager:
         merged.setdefault("step", 1.0)
         merged.setdefault("noise", 0.2)
 
+        # Override min/max from DB when farmer has configured device-specific thresholds.
+        # This ensures the simulator generates values in the farmer's expected range.
+        if info.min_value is not None:
+            merged["min"] = info.min_value
+            self.logger.debug("Simulator: device=%s using DB min_value=%.2f", info.device_id, info.min_value)
+        if info.max_value is not None:
+            merged["max"] = info.max_value
+            self.logger.debug("Simulator: device=%s using DB max_value=%.2f", info.device_id, info.max_value)
+
         return merged
 
     def _fetch_active_devices(self) -> Dict[str, DeviceInfo]:
         sql = """
-        SELECT d.id::text, d.adafruit_feed_key, m.device_type::text, m.metric_type::text, d.is_active
+        SELECT d.id::text, d.adafruit_feed_key, m.device_type::text, m.metric_type::text,
+               d.is_active, d.min_value, d.max_value
         FROM devices d
         JOIN models m ON m.id = d.model_id
         WHERE d.status = 'ACTIVE'
@@ -119,7 +131,9 @@ class DigitalTwinManager:
                         feed_key=row[1].strip(),
                         device_type=row[2].upper(),
                         metric_type=row[3].upper(),
-                        is_active=bool(row[4])
+                        is_active=bool(row[4]),
+                        min_value=float(row[5]) if row[5] is not None else None,
+                        max_value=float(row[6]) if row[6] is not None else None,
                     )
                     devices[info.device_id] = info
         return devices
