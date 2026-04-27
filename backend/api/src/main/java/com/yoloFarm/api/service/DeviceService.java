@@ -158,6 +158,20 @@ public class DeviceService {
         return mapToResponse(deviceRepository.save(device));
     }
 
+    @Transactional
+    public DeviceResponse updateThreshold(UUID ownerId, UUID deviceId, Float minValue, Float maxValue) {
+        Device device = deviceRepository.findByIdAndFarmOwnerId(deviceId, ownerId)
+                .orElseThrow(() -> new EntityNotFoundException("Device not found with id: " + deviceId));
+
+        if (device.getStatus() != DeviceStatusEnum.ACTIVE) {
+            throw new ConflictException("Chỉ có thể cấu hình ngưỡng khi thiết bị đang ở trạng thái ACTIVE");
+        }
+
+        device.setMinValue(minValue);
+        device.setMaxValue(maxValue);
+        return mapToResponse(deviceRepository.save(device));
+    }
+
     @Transactional(readOnly = true)
     public List<DeviceResponse> getDeviceRequests(String status) {
         List<Device> devices;
@@ -382,6 +396,8 @@ public class DeviceService {
         response.setLastSeen(device.getLastSeen());
         response.setOperatingMode(device.getOperatingMode());
         response.setIsActive(device.getIsActive());
+        response.setMinValue(device.getMinValue());
+        response.setMaxValue(device.getMaxValue());
         return response;
     }
 }

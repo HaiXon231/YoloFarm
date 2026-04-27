@@ -48,4 +48,10 @@ public class Device {
 
     @Builder.Default
     private Boolean isActive = false;
+
+    @Column(name = "min_value")
+    private Float minValue;
+
+    @Column(name = "max_value")
+    private Float maxValue;
 }

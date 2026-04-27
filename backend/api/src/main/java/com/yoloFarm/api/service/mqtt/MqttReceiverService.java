@@ -225,6 +225,19 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
 
                 String metricType = device.getModel().getMetricType().name();
 
+                // Threshold validation: log warning when value is outside configured range.
+                // Non-blocking — data still flows to all observers.
+                Float minVal = device.getMinValue();
+                Float maxVal = device.getMaxValue();
+                if (minVal != null && metricValue < minVal) {
+                    log.warn("MqttReceiver: Value {:.2f} from device {} is below minimum threshold {:.2f} (metric={})",
+                            metricValue, device.getId(), minVal, metricType);
+                }
+                if (maxVal != null && metricValue > maxVal) {
+                    log.warn("MqttReceiver: Value {:.2f} from device {} exceeds maximum threshold {:.2f} (metric={})",
+                            metricValue, device.getId(), maxVal, metricType);
+                }
+
                 SensorData sensorData = new SensorData(
                         device.getFarm().getId(),
                         device.getId(),

@@ -19,4 +19,6 @@ public class DeviceResponse {
     private LocalDateTime lastSeen;
     private OperatingModeEnum operatingMode;
     private Boolean isActive;
+    private Float minValue;
+    private Float maxValue;
 }

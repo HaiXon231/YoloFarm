@@ -2,6 +2,7 @@ package com.yoloFarm.api.controller;
 
 import com.yoloFarm.api.dto.request.DeviceRenameRequest;
 import com.yoloFarm.api.dto.request.DeviceCommandRequest;
+import com.yoloFarm.api.dto.request.DeviceThresholdRequest;
 import com.yoloFarm.api.enums.OperatingModeEnum;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,6 +36,16 @@ public class DeviceController {
             @PathVariable("deviceId") UUID deviceId,
             @Valid @RequestBody DeviceRenameRequest request) {
         return ResponseEntity.ok(deviceService.updateDeviceName(currentUser.getId(), deviceId, request.getName()));
+    }
+
+    @PatchMapping("/{deviceId}/threshold")
+    public ResponseEntity<?> updateThreshold(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable("deviceId") UUID deviceId,
+            @RequestBody DeviceThresholdRequest request) {
+        return ResponseEntity.ok(deviceService.updateThreshold(
+                currentUser.getId(), deviceId,
+                request.getMinValue(), request.getMaxValue()));
     }
 
     @PostMapping("/{deviceId}/remove-requests")
