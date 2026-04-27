@@ -1,1 +1,18 @@
-{"commit_docs": false, "git": {"branching_strategy": "none"}, "workflow": {"no_auto_commit": true}}
+{
+  "mode": "yolo",
+  "granularity": "coarse",
+  "parallelization": true,
+  "commit_docs": false,
+  "model_profile": "balanced",
+  "git": {
+    "branching_strategy": "none"
+  },
+  "workflow": {
+    "no_auto_commit": true,
+    "research": true,
+    "plan_check": true,
+    "verifier": true,
+    "nyquist_validation": false,
+    "auto_advance": true
+  }
+}

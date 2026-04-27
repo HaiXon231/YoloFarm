@@ -8,15 +8,15 @@
 See: `.planning/PROJECT.md` (updated 2026-04-27)
 
 **Core value:** Nông dân có thể tin tưởng rằng dữ liệu cảm biến chính xác và máy bơm bật/tắt đúng theo quy tắc.
-**Current focus:** Phase 2 — Stability & Security Hardening
+**Current focus:** Phase 3 — Frontend Test Suite
 
 ## Milestone Progress
 
 | Phase | Name | Status |
 |---|---|---|
 | 1 | Per-Device Threshold Configuration | ✅ Complete |
-| 2 | Stability & Security Hardening | 🔵 Next up |
-| 3 | Frontend Test Suite | ⬜ Pending |
+| 2 | Stability & Security Hardening | ✅ Complete |
+| 3 | Frontend Test Suite | 🔵 Next up |
 | 4 | Production Deployment | ⬜ Pending |
 
 ## Completed Work (Pre-GSD)

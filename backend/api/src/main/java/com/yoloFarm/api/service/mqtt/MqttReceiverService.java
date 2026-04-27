@@ -18,6 +18,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 
 import java.time.Instant;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -33,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MqttReceiverService implements Subject, MqttCallbackExtended {
 
     private final List<Observer> injectedObservers;
-    private final List<Observer> observers = new ArrayList<>();
+    private final List<Observer> observers = new CopyOnWriteArrayList<>();
 
     private final IMqttClient mqttClient;
     private final DeviceRepository deviceRepository;

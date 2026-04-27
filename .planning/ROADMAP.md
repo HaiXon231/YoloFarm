@@ -7,7 +7,7 @@ YoloFarm v1.0 tập trung vào việc ổn định hóa hệ thống đang chạ
 ## Phases
 
 - [x] **Phase 1: Per-Device Threshold Configuration** - Farmer chỉnh ngưỡng min/max cho từng cảm biến; Simulator dùng ngưỡng từ DB
-- [ ] **Phase 2: Stability & Security Hardening** - Flyway migration, rate limiting, MQTT thread-safety, backend tests
+- [x] **Phase 2: Stability & Security Hardening** - Flyway migration, rate limiting, MQTT thread-safety, backend tests
 - [ ] **Phase 3: Frontend Test Suite** - Vitest + RTL cho Zustand stores và FarmDetailPage
 - [ ] **Phase 4: Production Deployment** - Dockerfile, HuggingFace Spaces, Vercel, Neon.tech
 
@@ -42,9 +42,9 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 02-01: Flyway Migration — Baseline V1 từ schema hiện tại, đổi ddl-auto
-- [ ] 02-02: Security Fixes — Rate limiting, MQTT thread-safety, cache eviction, Adafruit quota guard
-- [ ] 02-03: Backend Tests — Integration tests cho Rule Engine và Safety Watchdog
+- [x] 02-01: Flyway Migration — Baseline V1 từ schema hiện tại, đổi ddl-auto
+- [x] 02-02: Security Fixes — Rate limiting, MQTT thread-safety, cache eviction, Adafruit quota guard
+- [x] 02-03: Backend Tests — Integration tests cho Rule Engine và Safety Watchdog
 
 ### Phase 3: Frontend Test Suite
 **Goal**: Thiết lập Vitest + React Testing Library và viết tests cho các luồng UI quan trọng nhất.
@@ -81,6 +81,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Per-Device Threshold Config | 3/3 | Complete | 2026-04-27 |
-| 2. Stability & Security Hardening | 0/3 | Not started | - |
+| 2. Stability & Security Hardening | 3/3 | Complete | 2026-04-27 |
 | 3. Frontend Test Suite | 0/2 | Not started | - |
 | 4. Production Deployment | 0/3 | Not started | - |

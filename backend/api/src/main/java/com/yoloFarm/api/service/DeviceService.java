@@ -97,6 +97,7 @@ public class DeviceService {
             if (!normalizedName.equals(device.getName())) {
                 if (device.getAdafruitFeedKey() != null && !device.getAdafruitFeedKey().isBlank()) {
                     adafruitApiService.updateFeedName(device.getAdafruitFeedKey(), normalizedName);
+                    evictFeedKeyCacheSafe(device.getAdafruitFeedKey());
                 }
                 device.setName(normalizedName);
             }

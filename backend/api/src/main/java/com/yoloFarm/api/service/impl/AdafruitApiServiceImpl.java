@@ -1,6 +1,7 @@
 package com.yoloFarm.api.service.impl;
 
 import com.yoloFarm.api.service.AdafruitApiService;
+import com.yoloFarm.api.exception.ConflictException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -62,7 +63,7 @@ public class AdafruitApiServiceImpl implements AdafruitApiService {
                 if (errorMsg.contains("has already been taken")) {
                     log.warn("AdafruitAPI: Feed '{}' already exists, skipping creation.", feedKey);
                 } else {
-                    throw new IllegalStateException("Cannot create Adafruit feed due to invalid format (422): " + errorMsg);
+                    throw new ConflictException("Tài khoản Adafruit đã đạt giới hạn feed (tối đa 10). Không thể tạo thêm thiết bị.");
                 }
             } else if (e.getStatusCode().value() == 403 || e.getStatusCode().value() == 401) {
                 throw new IllegalStateException(
