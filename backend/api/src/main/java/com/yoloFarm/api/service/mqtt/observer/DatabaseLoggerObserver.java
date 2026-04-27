@@ -7,9 +7,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -20,11 +17,16 @@ public class DatabaseLoggerObserver implements Observer {
     @Override
     public void update(SensorData data) {
         try {
+            // BUG-10: Dùng timestamp từ SensorData (thời điểm thực nhận MQTT message)
+            // thay vì LocalDateTime.now() với hardcoded timezone. Nhất quán và portable.
+            java.time.LocalDateTime receivedAt = java.time.LocalDateTime
+                    .ofInstant(data.timestamp(), java.time.ZoneOffset.UTC);
+
             TelemetryData telemetry = TelemetryData.builder()
                     .deviceId(data.deviceId())
                     .metricType(data.metricType())
                     .value(data.value())
-                    .createdAt(LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")))
+                    .createdAt(receivedAt)
                     .build();
             telemetryDataRepository.save(telemetry);
             log.info("DatabaseLoggerObserver: Đã lưu TelemetryData thành công cho Device {}", data.deviceId());

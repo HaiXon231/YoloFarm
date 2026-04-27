@@ -18,6 +18,7 @@ import com.yoloFarm.api.repository.RuleRepository;
 import com.yoloFarm.api.service.AdafruitApiService;
 import com.yoloFarm.api.service.DeviceService;
 import com.yoloFarm.api.service.NotificationService;
+import com.yoloFarm.api.service.automation.AutomationRuntimeStateService;
 import com.yoloFarm.api.service.mqtt.MqttReceiverService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,6 +66,9 @@ class DeviceServiceRemovalApprovalTest {
 
         @Mock
         private MqttReceiverService mqttReceiverService;
+
+        @Mock
+        private AutomationRuntimeStateService automationRuntimeStateService;
 
         @InjectMocks
         private DeviceService deviceService;

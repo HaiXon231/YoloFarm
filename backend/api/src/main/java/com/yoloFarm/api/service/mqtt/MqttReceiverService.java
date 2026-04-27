@@ -8,6 +8,8 @@ import com.yoloFarm.api.service.mqtt.observer.Subject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.IMqttClient;
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -28,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class MqttReceiverService implements Subject {
+public class MqttReceiverService implements Subject, MqttCallback {
 
     private final List<Observer> injectedObservers;
     private final List<Observer> observers = new ArrayList<>();
@@ -72,6 +74,44 @@ public class MqttReceiverService implements Subject {
             injectedObservers.forEach(this::attach);
             log.info("MqttReceiver: Tự động attach {} observers", injectedObservers.size());
         }
+        // BUG-06: Đăng ký MqttCallback để nhận sự kiện connectionLost/reconnect
+        mqttClient.setCallback(this);
+    }
+
+    // ── MqttCallback implementations (BUG-06) ────────────────────────────────
+
+    /**
+     * BUG-06: Được Paho gọi khi mất kết nối broker.
+     * Reset subscribed flag để subscribeIfConnected() sẽ re-subscribe sau khi reconnect.
+     */
+    @Override
+    public void connectionLost(Throwable cause) {
+        log.warn("MqttReceiver: Mất kết nối tới broker Adafruit. Sẽ re-subscribe sau khi kết nối lại.", cause);
+        subscribed.set(false);
+    }
+
+    /**
+     * BUG-06: Được Paho gọi sau khi auto-reconnect thành công.
+     * Re-subscribe wildcard topic để tiếp tục nhận telemetry.
+     */
+    @Override
+    public void connectComplete(boolean reconnect, String serverURI) {
+        if (reconnect) {
+            log.info("MqttReceiver: Đã kết nối lại tới broker [{}]. Đang re-subscribe...", serverURI);
+            subscribeIfConnected();
+        }
+    }
+
+    /** BUG-06: MqttCallback.messageArrived — delegate tới logic handler thực tế. */
+    @Override
+    public void messageArrived(String topic, MqttMessage message) throws Exception {
+        processIncomingMessage(topic, message);
+    }
+
+    /** Không dùng (MqttReceiverService không publish). */
+    @Override
+    public void deliveryComplete(IMqttDeliveryToken token) {
+        // No-op
     }
 
     public void subscribeIfConnected() {
@@ -86,7 +126,7 @@ public class MqttReceiverService implements Subject {
 
             // Subscribe wildcard bắt mọi luồng feed của tài khoản Adafruit này
             String wildcardTopic = username + "/feeds/+";
-            mqttClient.subscribe(wildcardTopic, this::messageArrived);
+            mqttClient.subscribe(wildcardTopic, this::processIncomingMessage);
             subscribed.set(true);
             log.info("MqttReceiver: Đã Subscribe thành công topic: [{}]", wildcardTopic);
         } catch (Exception e) {
@@ -136,7 +176,7 @@ public class MqttReceiverService implements Subject {
         observerExecutor.shutdown();
     }
 
-    public void messageArrived(String topic, MqttMessage message) {
+    private void processIncomingMessage(String topic, MqttMessage message) {
         try {
             String payload = new String(message.getPayload());
 

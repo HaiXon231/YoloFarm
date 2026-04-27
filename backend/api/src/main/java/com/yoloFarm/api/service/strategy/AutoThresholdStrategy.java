@@ -32,10 +32,12 @@ public class AutoThresholdStrategy implements IrrigationStrategy {
 
         String adafruitFeedKey = device.getAdafruitFeedKey();
         if (adafruitFeedKey == null || adafruitFeedKey.isBlank()) {
-            log.warn("Thiết bị {} không có Adafruit Feed Key được cấu hình!", deviceId);
-            return false;
+            // BUG-01: Ném exception thay vì silent return false
+            throw new IllegalStateException(
+                    "Thiết bị " + deviceId + " chưa có Adafruit Feed Key. Vui lòng liên hệ Admin.");
         }
 
+        // BUG-02: Publish MQTT trước, lưu DB sau khi thành công
         mqttSenderService.sendCommand(adafruitFeedKey, command);
         device.setIsActive("ON".equalsIgnoreCase(command));
         deviceRepository.save(device);

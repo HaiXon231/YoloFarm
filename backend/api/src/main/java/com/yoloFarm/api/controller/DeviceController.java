@@ -70,7 +70,14 @@ public class DeviceController {
             @Valid @RequestBody DeviceCommandRequest request) {
         deviceService.assertDeviceOwnership(currentUser.getId(), deviceId);
         String command = request.getCommand().name();
-        irrigationContext.executeControl(manualStrategy, null, deviceId, command);
+        // BUG-09: Dùng farmId từ DeviceService thay vì truyền null
+        UUID farmId = deviceService.getFarmIdByDevice(currentUser.getId(), deviceId);
+        // BUG-01: Check return value — false nghĩa là lệnh không được gửi (vd: device ở chế độ sai)
+        boolean sent = irrigationContext.executeControl(manualStrategy, farmId, deviceId, command);
+        if (!sent) {
+            throw new IllegalStateException(
+                    "Lệnh [" + command + "] không thể thực thi. Vui lòng kiểm tra chế độ hoạt động của thiết bị.");
+        }
         return ResponseEntity.ok(Map.of("message", "Lệnh [" + command + "] đã được gửi tới thiết bị thành công."));
     }
 

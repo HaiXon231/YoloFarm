@@ -9,6 +9,7 @@ import com.yoloFarm.api.enums.RuleTypeEnum;
 import com.yoloFarm.api.repository.DeviceRepository;
 import com.yoloFarm.api.repository.FarmRepository;
 import com.yoloFarm.api.repository.RuleRepository;
+import com.yoloFarm.api.service.automation.AutomationRuntimeStateService;
 import com.yoloFarm.api.enums.ActionCommandEnum;
 import com.yoloFarm.api.enums.OperatingModeEnum;
 import jakarta.persistence.EntityNotFoundException;
@@ -36,6 +37,7 @@ public class RuleService {
     private final RuleRepository ruleRepository;
     private final FarmRepository farmRepository;
     private final DeviceRepository deviceRepository;
+    private final AutomationRuntimeStateService automationRuntimeStateService;
 
     @Transactional
     public RuleResponse createRule(RuleCreateRequest request, UUID ownerId) {
@@ -139,8 +141,12 @@ public class RuleService {
 
         Device actionDevice = rule.getActionDevice();
         boolean deletedRuleWasActive = Boolean.TRUE.equals(rule.getIsActive());
+        UUID deletedRuleId = rule.getId();
 
         ruleRepository.delete(rule);
+
+        // BUG-05: Cleanup cooldown state để tránh stale entries sau khi rule bị xóa
+        automationRuntimeStateService.evictRuleState(deletedRuleId);
 
         if (actionDevice == null || actionDevice.getId() == null || !deletedRuleWasActive) {
             return;

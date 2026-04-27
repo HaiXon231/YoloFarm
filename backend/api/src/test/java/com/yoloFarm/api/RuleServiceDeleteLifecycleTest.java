@@ -7,6 +7,7 @@ import com.yoloFarm.api.repository.DeviceRepository;
 import com.yoloFarm.api.repository.FarmRepository;
 import com.yoloFarm.api.repository.RuleRepository;
 import com.yoloFarm.api.service.RuleService;
+import com.yoloFarm.api.service.automation.AutomationRuntimeStateService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +34,9 @@ class RuleServiceDeleteLifecycleTest {
 
     @Mock
     private DeviceRepository deviceRepository;
+
+    @Mock
+    private AutomationRuntimeStateService automationRuntimeStateService;
 
     @InjectMocks
     private RuleService ruleService;

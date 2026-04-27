@@ -13,6 +13,7 @@ import com.yoloFarm.api.repository.DeviceModelRepository;
 import com.yoloFarm.api.repository.DeviceRepository;
 import com.yoloFarm.api.repository.FarmRepository;
 import com.yoloFarm.api.repository.RuleRepository;
+import com.yoloFarm.api.service.automation.AutomationRuntimeStateService;
 import com.yoloFarm.api.service.mqtt.MqttReceiverService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,7 @@ public class DeviceService {
     private final JdbcTemplate jdbcTemplate;
     @Lazy
     private final MqttReceiverService mqttReceiverService;
+    private final AutomationRuntimeStateService automationRuntimeStateService;
 
     @Transactional(readOnly = true)
     public List<DeviceResponse> getDevicesByFarmId(UUID farmId, UUID ownerId) {
@@ -84,6 +86,12 @@ public class DeviceService {
         Device device = deviceRepository.findByIdAndFarmOwnerId(deviceId, ownerId)
                 .orElseThrow(() -> new EntityNotFoundException("Device not found with id: " + deviceId));
 
+        // BUG-03: Chỉ cho phép rename khi device đang ACTIVE.
+        // PENDING/PENDING_REMOVAL: feed key chưa tồn tại hoặc device sắp bị xóa.
+        if (device.getStatus() != DeviceStatusEnum.ACTIVE) {
+            throw new ConflictException("Chỉ có thể đổi tên thiết bị khi đang ở trạng thái ACTIVE");
+        }
+
         if (newName != null && !newName.isBlank()) {
             String normalizedName = newName.trim();
             if (!normalizedName.equals(device.getName())) {
@@ -103,6 +111,17 @@ public class DeviceService {
         if (deviceRepository.findByIdAndFarmOwnerId(deviceId, ownerId).isEmpty()) {
             throw new AccessDeniedException("Bạn không có quyền thao tác thiết bị này");
         }
+    }
+
+    /**
+     * BUG-09: Trả về farmId của device để caller truyền đúng vào strategy
+     * (thay vì truyền null).
+     */
+    @Transactional(readOnly = true)
+    public UUID getFarmIdByDevice(UUID ownerId, UUID deviceId) {
+        return deviceRepository.findByIdAndFarmOwnerId(deviceId, ownerId)
+                .map(device -> device.getFarm().getId())
+                .orElseThrow(() -> new AccessDeniedException("Bạn không có quyền thao tác thiết bị này"));
     }
 
     @Transactional
@@ -146,7 +165,15 @@ public class DeviceService {
             devices = deviceRepository
                     .findByStatusIn(List.of(DeviceStatusEnum.PENDING, DeviceStatusEnum.PENDING_REMOVAL));
         } else {
-            devices = deviceRepository.findByStatus(DeviceStatusEnum.valueOf(status));
+            // BUG-04: Validate enum string trước valueOf() để trả lỗi rõ ràng, không lộ tên các enum value nội bộ
+            DeviceStatusEnum statusEnum;
+            try {
+                statusEnum = DeviceStatusEnum.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                throw new IllegalArgumentException(
+                        "Trạng thái không hợp lệ: '" + status + "'. Chấp nhận: PENDING, PENDING_REMOVAL, ACTIVE, REJECTED");
+            }
+            devices = deviceRepository.findByStatus(statusEnum);
         }
         return devices.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
@@ -176,10 +203,9 @@ public class DeviceService {
         device.setStatus(DeviceStatusEnum.ACTIVE);
         Device saved = deviceRepository.save(device);
 
-        // Xóa cache (nếu có) để lần nhận tin nhắn tới nó tự load lại bằng Query chuẩn
-        // (JOIN FETCH model & farm)
-        // Tuyệt đối không nhét đối tượng 'saved' vào RAM Cache vì nó đang dính Lazy
-        // proxy (chưa được fetch full)
+        // BUG-08: evictFeedKeyCacheSafe() là no-op khi feed key mới approve — chưa có entry nào trong cache.
+        // Mục đích: đảm bảo không bị stale entry nếu admin approve lại cùng feed key (edge case).
+        // Lần nhận MQTT đầu tiên sẽ cache miss và tự warm lại từ DB.
         evictFeedKeyCacheSafe(resolvedFeedKey);
 
         // Bắn tín hiệu NOTIFY xuống Postgres để Python Simulator chạy ngay lập tức
@@ -260,6 +286,9 @@ public class DeviceService {
 
         ruleRepository.deleteRulesBoundToDevice(device.getId());
         deviceRepository.delete(device);
+
+        // BUG-05: Cleanup in-memory automation state để tránh accumulated stale entries
+        automationRuntimeStateService.evictDeviceState(device.getId());
 
         // Xóa cache feed key để tránh stale mapping sau khi thiết bị đã bị xóa khỏi DB.
         evictFeedKeyCacheSafe(feedKey);

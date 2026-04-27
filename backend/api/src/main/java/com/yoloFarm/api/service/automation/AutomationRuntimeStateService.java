@@ -57,4 +57,27 @@ public class AutomationRuntimeStateService {
     private String buildRuleCommandKey(UUID ruleId, String command) {
         return ruleId + ":" + command.toUpperCase();
     }
+
+    /**
+     * BUG-05: Xóa toàn bộ state liên quan đến device khi device bị xóa.
+     * Ngăn accumulated stale entries trong long-running production.
+     */
+    public void evictDeviceState(UUID deviceId) {
+        if (deviceId == null) {
+            return;
+        }
+        autoOnSinceByDevice.remove(deviceId);
+    }
+
+    /**
+     * BUG-05: Xóa toàn bộ state liên quan đến rule khi rule bị xóa.
+     * Cleanup cả ON và OFF cooldown keys cho rule đó.
+     */
+    public void evictRuleState(UUID ruleId) {
+        if (ruleId == null) {
+            return;
+        }
+        lastRuleCommandByKey.remove(buildRuleCommandKey(ruleId, "ON"));
+        lastRuleCommandByKey.remove(buildRuleCommandKey(ruleId, "OFF"));
+    }
 }

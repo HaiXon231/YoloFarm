@@ -32,10 +32,13 @@ public class ManualStrategy implements IrrigationStrategy {
 
         String adafruitFeedKey = device.getAdafruitFeedKey();
         if (adafruitFeedKey == null || adafruitFeedKey.isBlank()) {
-            log.warn("Thiết bị {} không có Adafruit Feed Key được cấu hình!", deviceId);
-            return false;
+            // BUG-01: Ném exception thay vì silent return false — caller biết lệnh thất bại
+            throw new IllegalStateException(
+                    "Thiết bị " + deviceId + " chưa có Adafruit Feed Key. Vui lòng liên hệ Admin.");
         }
 
+        // BUG-02: Publish MQTT trước, chỉ lưu DB sau khi publish thành công.
+        // Nếu MQTT ném exception → DB không bị cập nhật → tránh state mismatch.
         mqttSenderService.sendCommand(adafruitFeedKey, command);
 
         device.setIsActive("ON".equalsIgnoreCase(command));
