@@ -9,7 +9,7 @@ YoloFarm v1.0 tập trung vào việc ổn định hóa hệ thống đang chạ
 - [x] **Phase 1: Per-Device Threshold Configuration** - Farmer chỉnh ngưỡng min/max cho từng cảm biến; Simulator dùng ngưỡng từ DB
 - [x] **Phase 2: Stability & Security Hardening** - Flyway migration, rate limiting, MQTT thread-safety, backend tests
 - [x] **Phase 3: Frontend Test Suite** - Vitest + RTL cho Zustand stores và FarmDetailPage
-- [ ] **Phase 4: Production Deployment** - Dockerfile, HuggingFace Spaces, Vercel, Neon.tech
+- [x] **Phase 4: Production Deployment** - Dockerfile, HuggingFace Spaces, Vercel, Neon.tech
 
 ## Phase Details
 
@@ -72,9 +72,9 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 04-01: Database — Tạo Neon.tech project, chạy Flyway migration V1
-- [ ] 04-02: Backend Docker — Multi-stage Dockerfile, HuggingFace Spaces deploy
-- [ ] 04-03: Frontend Deploy — Vercel deploy với env vars production
+- [x] 04-01: Database — Tạo Neon.tech project, chạy Flyway migration V1
+- [x] 04-02: Backend Docker — Multi-stage Dockerfile, HuggingFace Spaces deploy
+- [x] 04-03: Frontend Deploy — Vercel deploy với env vars production
 
 ## Progress
 
@@ -83,4 +83,4 @@ Plans:
 | 1. Per-Device Threshold Config | 3/3 | Complete | 2026-04-27 |
 | 2. Stability & Security Hardening | 3/3 | Complete | 2026-04-27 |
 | 3. Frontend Test Suite | 2/2 | Complete | 2026-04-27 |
-| 4. Production Deployment | 0/3 | Not started | - |
+| 4. Production Deployment | 3/3 | Complete | 2026-04-27 |

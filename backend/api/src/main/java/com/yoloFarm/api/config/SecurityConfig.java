@@ -1,5 +1,7 @@
 package com.yoloFarm.api.config;
 
+import org.springframework.security.config.Customizer;
+
 import com.yoloFarm.api.security.JwtAuthenticationFilter;
 import com.yoloFarm.api.security.RestAccessDeniedHandler;
 import com.yoloFarm.api.security.RestAuthenticationEntryPoint;
@@ -29,6 +31,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**", "/ws/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()

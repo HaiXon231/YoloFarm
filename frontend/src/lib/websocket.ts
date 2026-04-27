@@ -52,7 +52,7 @@ export function connectToFarm(
     stompClient.deactivate()
   }
 
-  const wsUrl = '/ws'
+  const wsUrl = import.meta.env.VITE_WS_URL || '/ws'
   const token = localStorage.getItem('access_token')
 
   stompClient = new Client({
@@ -123,7 +123,7 @@ export function connectAdminStats(
   const token = localStorage.getItem('access_token')
 
   adminStompClient = new Client({
-    webSocketFactory: () => new SockJS('/ws'),
+    webSocketFactory: () => new SockJS(import.meta.env.VITE_WS_URL || '/ws'),
     connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
     reconnectDelay: 10000,
     heartbeatIncoming: 30000,
@@ -160,7 +160,7 @@ export function connectNotificationUnread(onUnreadChanged: NotificationUnreadCal
   const token = localStorage.getItem('access_token')
 
   notificationStompClient = new Client({
-    webSocketFactory: () => new SockJS('/ws'),
+    webSocketFactory: () => new SockJS(import.meta.env.VITE_WS_URL || '/ws'),
     connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
     reconnectDelay: 10000,
     heartbeatIncoming: 30000,
