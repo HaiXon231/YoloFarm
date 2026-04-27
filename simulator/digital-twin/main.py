@@ -22,6 +22,7 @@ class DeviceInfo:
     feed_key: str
     device_type: str
     metric_type: str
+    is_active: bool = False
 
 
 @dataclass
@@ -100,7 +101,7 @@ class DigitalTwinManager:
 
     def _fetch_active_devices(self) -> Dict[str, DeviceInfo]:
         sql = """
-        SELECT d.id::text, d.adafruit_feed_key, m.device_type::text, m.metric_type::text
+        SELECT d.id::text, d.adafruit_feed_key, m.device_type::text, m.metric_type::text, d.is_active
         FROM devices d
         JOIN models m ON m.id = d.model_id
         WHERE d.status = 'ACTIVE'
@@ -118,13 +119,17 @@ class DigitalTwinManager:
                         feed_key=row[1].strip(),
                         device_type=row[2].upper(),
                         metric_type=row[3].upper(),
+                        is_active=bool(row[4])
                     )
                     devices[info.device_id] = info
         return devices
 
     def _publish_value(self, runtime: DeviceRuntime, value: float):
         topic = f"{self.adafruit_username}/feeds/{runtime.info.feed_key}"
-        payload = f"{value:.2f}" if isinstance(value, float) else str(value)
+        if runtime.info.device_type == "ACTUATOR":
+            payload = "ON" if value > 0.5 else "OFF"
+        else:
+            payload = f"{value:.2f}" if isinstance(value, float) else str(value)
         self.mqtt_client.publish(topic, payload=payload, qos=1)
         self.logger.info("Publish telemetry device=%s feed=%s value=%s", runtime.info.device_id, runtime.info.feed_key, payload)
 
@@ -171,6 +176,8 @@ class DigitalTwinManager:
 
     def _start_runtime(self, info: DeviceInfo, profile: dict):
         runtime = DeviceRuntime(info=info, profile=profile)
+        if info.device_type == "ACTUATOR":
+            runtime.actuator_state = 1 if info.is_active else 0
         runtime.thread = threading.Thread(target=self._device_loop, args=(runtime,), daemon=True)
 
         with self._lock:

@@ -60,7 +60,7 @@ public class MqttConfig {
             options.setAutomaticReconnect(true); // Tự kết nối lại khi mất kết nối
 
             mqttClient.connect(options);
-            log.info("MqttConfig: Kết nối thành công tới Adafruit IO MQTT Broker!");
+            log.info("MqttConfig: Successfully connected to Adafruit IO MQTT Broker!");
 
             MqttReceiverService receiverService = mqttReceiverServiceProvider.getIfAvailable();
             if (receiverService != null) {
@@ -68,7 +68,7 @@ public class MqttConfig {
             }
         } catch (MqttException e) {
             // App vẫn chạy bình thường, MQTT sẽ tự reconnect sau
-            log.error("MqttConfig: Không thể kết nối MQTT Broker. Sẽ thử kết nối lại tự động.", e);
+            log.error("MqttConfig: Cannot connect to MQTT Broker. Will retry automatically.", e);
         }
     }
 }

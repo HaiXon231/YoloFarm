@@ -85,7 +85,7 @@ public class GlobalExceptionHandler {
 
         @ExceptionHandler(Exception.class)
         public ResponseEntity<ErrorResponse> handleGeneral(Exception ex) {
-                log.error("Lỗi hệ thống không xác định", ex);
+                log.error("Unknown system error", ex);
                 return build(HttpStatus.INTERNAL_SERVER_ERROR,
                                 "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.",
                                 null);

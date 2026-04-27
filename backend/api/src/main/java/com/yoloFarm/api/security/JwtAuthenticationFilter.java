@@ -62,11 +62,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (ExpiredJwtException e) {
-            log.warn("JWT Token đã hết hạn cho request: {}", request.getRequestURI());
+            log.warn("JWT Token expired for request: {}", request.getRequestURI());
         } catch (JwtException e) {
-            log.warn("JWT Token không hợp lệ: {}", e.getMessage());
+            log.warn("Invalid JWT Token: {}", e.getMessage());
         } catch (Exception e) {
-            log.error("Lỗi không xác định khi xử lý JWT: {}", e.getMessage());
+            log.error("Unknown error while processing JWT: {}", e.getMessage());
         }
         filterChain.doFilter(request, response);
     }

@@ -116,7 +116,7 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
         }
 
         if (!farmRepository.existsByIdAndOwnerId(farmId, userId)) {
-            log.warn("WebSocket subscribe bị chặn: userId={} farmId={} destination={}", userId, farmId, destination);
+            log.warn("WebSocket subscribe blocked: userId={} farmId={} destination={}", userId, farmId, destination);
             throw new AccessDeniedException("Bạn không có quyền subscribe telemetry của farm này");
         }
     }
@@ -146,7 +146,7 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
                 try {
                     return UUID.fromString(userIdText);
                 } catch (IllegalArgumentException ignored) {
-                    log.warn("SESSION_USER_ID không hợp lệ: {}", userIdText);
+                    log.warn("Invalid SESSION_USER_ID: {}", userIdText);
                 }
             }
         }

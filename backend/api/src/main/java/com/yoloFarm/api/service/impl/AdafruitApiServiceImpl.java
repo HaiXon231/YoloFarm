@@ -50,30 +50,30 @@ public class AdafruitApiServiceImpl implements AdafruitApiService {
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 
         try {
-            log.info("Gửi request tạo Feed [key={}, name={}] lên Adafruit IO...", feedKey, feedName);
+            log.info("AdafruitAPI: Sending request to create feed [key={}, name={}]...", feedKey, feedName);
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, request, String.class);
-            log.info("Feed được tạo thành công trên Adafruit. Status: {}", response.getStatusCode());
+            log.info("AdafruitAPI: Feed created successfully. Status: {}", response.getStatusCode());
         } catch (HttpClientErrorException e) {
             String errorMsg = e.getResponseBodyAsString();
-            log.error("Lỗi khi tạo Adafruit Feed: Mã lỗi = {}, Response = {}", e.getStatusCode(), errorMsg);
+            log.error("AdafruitAPI: Failed to create feed: status={}, response={}", e.getStatusCode(), errorMsg);
 
             if (e.getStatusCode().value() == 422) {
                 // Adafruit returns 422 if feed already exists or invalid format
                 if (errorMsg.contains("has already been taken")) {
-                    log.warn("Feed '{}' đã tồn tại trên Adafruit, bỏ qua bước khởi tạo.", feedKey);
+                    log.warn("AdafruitAPI: Feed '{}' already exists, skipping creation.", feedKey);
                 } else {
-                    throw new IllegalStateException("Không thể tạo Feed Adafruit do sai định dạng (422): " + errorMsg);
+                    throw new IllegalStateException("Cannot create Adafruit feed due to invalid format (422): " + errorMsg);
                 }
             } else if (e.getStatusCode().value() == 403 || e.getStatusCode().value() == 401) {
                 throw new IllegalStateException(
-                        "Lỗi xác thực Adafruit (403). Bạn có thể đã tải hết giới hạn 10 Feed miễn phí. Chi tiết: "
+                        "Adafruit auth error (403). You may have reached the 10-feed free limit. Details: "
                                 + errorMsg);
             } else {
-                throw new IllegalStateException("Lỗi từ máy chủ Adafruit (" + e.getStatusCode() + "): " + errorMsg);
+                throw new IllegalStateException("Adafruit server error (" + e.getStatusCode() + "): " + errorMsg);
             }
         } catch (Exception e) {
-            log.error("Lỗi nội bộ khi kết nối Adafruit REST API", e);
-            throw new IllegalStateException("Lỗi sự cố khi kết nối HTTP tới Adafruit: " + e.getMessage());
+            log.error("AdafruitAPI: Internal error connecting to Adafruit REST API", e);
+            throw new IllegalStateException("HTTP connection error to Adafruit: " + e.getMessage());
         }
     }
 
@@ -92,28 +92,28 @@ public class AdafruitApiServiceImpl implements AdafruitApiService {
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 
         try {
-            log.info("Gửi request đổi tên Feed [key={}, newName={}] lên Adafruit IO...", feedKey, feedName);
+            log.info("AdafruitAPI: Sending request to rename feed [key={}, newName={}]...", feedKey, feedName);
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PUT, request, String.class);
-            log.info("Đổi tên Feed thành công trên Adafruit. Status: {}", response.getStatusCode());
+            log.info("AdafruitAPI: Feed renamed successfully. Status: {}", response.getStatusCode());
         } catch (HttpClientErrorException e) {
             String errorMsg = e.getResponseBodyAsString();
-            log.error("Lỗi khi đổi tên Adafruit Feed: Mã lỗi = {}, Response = {}", e.getStatusCode(), errorMsg);
+            log.error("AdafruitAPI: Failed to rename feed: status={}, response={}", e.getStatusCode(), errorMsg);
 
             if (e.getStatusCode().value() == 404) {
-                throw new IllegalStateException("Không tìm thấy Feed trên Adafruit để đổi tên: " + feedKey);
+                throw new IllegalStateException("Feed not found on Adafruit for rename: " + feedKey);
             } else if (e.getStatusCode().value() == 422) {
                 throw new IllegalStateException(
-                        "Không thể đổi tên Feed Adafruit do dữ liệu không hợp lệ (422): " + errorMsg);
+                        "Cannot rename Adafruit feed due to invalid data (422): " + errorMsg);
             } else if (e.getStatusCode().value() == 403 || e.getStatusCode().value() == 401) {
                 throw new IllegalStateException(
-                        "Lỗi xác thực Adafruit khi đổi tên Feed (403/401). Chi tiết: " + errorMsg);
+                        "Adafruit auth error when renaming feed (403/401). Details: " + errorMsg);
             } else {
                 throw new IllegalStateException(
-                        "Lỗi từ máy chủ Adafruit khi đổi tên Feed (" + e.getStatusCode() + "): " + errorMsg);
+                        "Adafruit server error when renaming feed (" + e.getStatusCode() + "): " + errorMsg);
             }
         } catch (Exception e) {
-            log.error("Lỗi nội bộ khi gọi API đổi tên Feed Adafruit", e);
-            throw new IllegalStateException("Lỗi sự cố khi kết nối HTTP tới Adafruit: " + e.getMessage());
+            log.error("AdafruitAPI: Internal error calling rename feed API", e);
+            throw new IllegalStateException("HTTP connection error to Adafruit: " + e.getMessage());
         }
     }
 
@@ -128,27 +128,27 @@ public class AdafruitApiServiceImpl implements AdafruitApiService {
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
         try {
-            log.info("Gửi request xóa Feed [key={}] trên Adafruit IO...", feedKey);
+            log.info("AdafruitAPI: Sending request to delete feed [key={}]...", feedKey);
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.DELETE, request, String.class);
-            log.info("Xóa Feed thành công trên Adafruit. Status: {}", response.getStatusCode());
+            log.info("AdafruitAPI: Feed deleted successfully. Status: {}", response.getStatusCode());
         } catch (HttpClientErrorException e) {
             String errorMsg = e.getResponseBodyAsString();
-            log.error("Lỗi khi xóa Adafruit Feed: Mã lỗi = {}, Response = {}", e.getStatusCode(), errorMsg);
+            log.error("AdafruitAPI: Failed to delete feed: status={}, response={}", e.getStatusCode(), errorMsg);
 
             if (e.getStatusCode().value() == 404) {
-                log.warn("Feed [{}] không tồn tại trên Adafruit, bỏ qua xóa feed từ xa.", feedKey);
+                log.warn("AdafruitAPI: Feed [{}] not found on Adafruit, skipping remote deletion.", feedKey);
                 return;
             }
             if (e.getStatusCode().value() == 403 || e.getStatusCode().value() == 401) {
                 throw new IllegalStateException(
-                        "Lỗi xác thực Adafruit khi xóa Feed (403/401). Chi tiết: " + errorMsg);
+                        "Adafruit auth error when deleting feed (403/401). Details: " + errorMsg);
             }
 
             throw new IllegalStateException(
-                    "Lỗi từ máy chủ Adafruit khi xóa Feed (" + e.getStatusCode() + "): " + errorMsg);
+                    "Adafruit server error when deleting feed (" + e.getStatusCode() + "): " + errorMsg);
         } catch (Exception e) {
-            log.error("Lỗi nội bộ khi gọi API xóa Feed Adafruit", e);
-            throw new IllegalStateException("Lỗi sự cố khi kết nối HTTP tới Adafruit: " + e.getMessage());
+            log.error("AdafruitAPI: Internal error calling delete feed API", e);
+            throw new IllegalStateException("HTTP connection error to Adafruit: " + e.getMessage());
         }
     }
 }

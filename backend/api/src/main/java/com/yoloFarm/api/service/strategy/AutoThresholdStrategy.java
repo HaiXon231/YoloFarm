@@ -20,13 +20,13 @@ public class AutoThresholdStrategy implements IrrigationStrategy {
 
     @Override
     public boolean executeControl(UUID farmId, UUID deviceId, String command) {
-        log.info("Đang xử lý AutoThresholdStrategy cho thiết bị {}...", deviceId);
+        log.info("Processing AutoThresholdStrategy for device {}...", deviceId);
 
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new RuntimeException("Device not found"));
 
         if (device.getOperatingMode() != OperatingModeEnum.AUTO) {
-            log.error("Từ chối thực thi tự động vì thiết bị {} đang ở chế độ MANUAL", deviceId);
+            log.error("Refused auto execution because device {} is in MANUAL mode", deviceId);
             return false;
         }
 
@@ -42,7 +42,7 @@ public class AutoThresholdStrategy implements IrrigationStrategy {
         device.setIsActive("ON".equalsIgnoreCase(command));
         deviceRepository.save(device);
 
-        log.info("Đã gửi lệnh {} tự động (Theo Cảm Biến) cho thiết bị {}", command, deviceId);
+        log.info("Sent auto command {} (Sensor Based) to device {}", command, deviceId);
         return true;
     }
 }

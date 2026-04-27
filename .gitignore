@@ -31,4 +31,4 @@ frontend/.env.*.local
 .codex/
 .github/
 .planning/codebase
-
+implementation_plan.md

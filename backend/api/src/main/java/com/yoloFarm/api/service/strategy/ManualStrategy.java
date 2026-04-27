@@ -20,13 +20,13 @@ public class ManualStrategy implements IrrigationStrategy {
 
     @Override
     public boolean executeControl(UUID farmId, UUID deviceId, String command) {
-        log.info("Đang xử lý ManualStrategy cho thiết bị {}...", deviceId);
+        log.info("Processing ManualStrategy for device {}...", deviceId);
 
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new RuntimeException("Device not found"));
 
         if (device.getOperatingMode() != OperatingModeEnum.MANUAL) {
-            log.error("Từ chối lệnh điều khiển thủ công vì thiết bị {} đang chạy chế độ TỰ ĐỘNG", deviceId);
+            log.error("Refused manual control because device {} is in AUTO mode", deviceId);
             return false;
         }
 
@@ -44,7 +44,7 @@ public class ManualStrategy implements IrrigationStrategy {
         device.setIsActive("ON".equalsIgnoreCase(command));
         deviceRepository.save(device);
 
-        log.info("Đã gửi lệnh {} thành công bằng chế độ MANUAL cho thiết bị {}", command, deviceId);
+        log.info("Sent command {} successfully in MANUAL mode to device {}", command, deviceId);
         return true;
     }
 }

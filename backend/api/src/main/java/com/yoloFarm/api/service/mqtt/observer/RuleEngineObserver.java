@@ -33,7 +33,7 @@ public class RuleEngineObserver implements Observer {
 
     @Override
     public void update(SensorData data) {
-        log.info("RuleEngineObserver nhận dữ liệu: {} = {}", data.metricType(), data.value());
+        log.info("RuleEngineObserver: Received sensor data: {} = {}", data.metricType(), data.value());
 
         // JOIN FETCH để tránh N+1 queries khi truy cập rule.getFarm() và
         // rule.getActionDevice()
@@ -54,11 +54,11 @@ public class RuleEngineObserver implements Observer {
             Instant now = clock.instant();
             if (automationRuntimeStateService.isRuleCommandInCooldown(
                     rule.getId(), command, ruleCommandCooldownSeconds, now)) {
-                log.debug("Rule {} đang trong cooldown cho command {}", rule.getId(), command);
+                log.debug("Rule {} is in cooldown for command {}", rule.getId(), command);
                 continue;
             }
 
-            log.info("Rule Triggered: Đã tự động bật/tắt thiết bị dựa trên cảm biến ({} {} {})",
+            log.info("Rule triggered: auto control device based on sensor ({} {} {})",
                     data.value(), rule.getOperator(), rule.getThresholdValue());
 
             boolean success = irrigationContext.executeControl(
@@ -74,7 +74,7 @@ public class RuleEngineObserver implements Observer {
             automationRuntimeStateService.markRuleCommandExecuted(rule.getId(), command, now);
             automationRuntimeStateService.markAutoCommand(rule.getActionDevice().getId(), command, now);
 
-            String msg = String.format("Hệ thống tự động: Đã %s [%s] do %s (%s %s %s)",
+            String msg = String.format("Auto system: %s [%s] triggered by %s (%s %s %s)",
                     command,
                     rule.getActionDevice().getName(),
                     data.metricType(),
@@ -90,12 +90,12 @@ public class RuleEngineObserver implements Observer {
         boolean active = Boolean.TRUE.equals(isActive);
 
         if ("ON".equalsIgnoreCase(command) && active) {
-            log.debug("Skip rule {} vì actuator {} đã ON", rule.getId(), rule.getActionDevice().getId());
+            log.debug("Skip rule {} - actuator {} is already ON", rule.getId(), rule.getActionDevice().getId());
             return true;
         }
 
         if ("OFF".equalsIgnoreCase(command) && !active) {
-            log.debug("Skip rule {} vì actuator {} đã OFF", rule.getId(), rule.getActionDevice().getId());
+            log.debug("Skip rule {} - actuator {} is already OFF", rule.getId(), rule.getActionDevice().getId());
             return true;
         }
 

@@ -27,9 +27,9 @@ public class WebSocketNotifierObserver implements Observer {
 
             String destination = "/topic/farm/" + data.farmId() + "/telemetry";
             messagingTemplate.convertAndSend(destination, (Object) payload);
-            log.info("WebSocketNotifierObserver: Đã đẩy dữ liệu Realtime lên kênh {}", destination);
+            log.info("WebSocketNotifierObserver: Pushed realtime data to channel {}", destination);
         } catch (Exception e) {
-            log.error("WebSocketNotifierObserver: Lỗi khi đẩy tin nhắn Realtime WebSocket", e);
+            log.error("WebSocketNotifierObserver: Error pushing realtime WebSocket message", e);
         }
     }
 }

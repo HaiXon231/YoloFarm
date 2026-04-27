@@ -163,7 +163,7 @@ public class RuleService {
 
         actionDevice.setOperatingMode(OperatingModeEnum.MANUAL);
         deviceRepository.save(actionDevice);
-        log.info("RuleService: Action device {} được chuyển về MANUAL vì đã xóa rule active cuối cùng.",
+        log.info("RuleService: Action device {} switched to MANUAL because the last active rule was deleted.",
                 actionDevice.getId());
     }
 
@@ -229,7 +229,7 @@ public class RuleService {
                 rule.setIsActive(false);
                 rule = ruleRepository.save(rule);
             }
-            log.info("RuleService: Rule {} '{}' được đặt inactive vì chưa có cặp ON/OFF.",
+            log.info("RuleService: Rule {} '{}' was set to inactive because it lacks an ON/OFF pair.",
                     rule.getRuleType(), rule.getRuleName());
             return rule;
         }

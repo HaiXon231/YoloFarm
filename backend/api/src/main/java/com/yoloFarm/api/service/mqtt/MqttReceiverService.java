@@ -72,7 +72,7 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
     public void init() {
         if (injectedObservers != null) {
             injectedObservers.forEach(this::attach);
-            log.info("MqttReceiver: Tự động attach {} observers", injectedObservers.size());
+            log.info("MqttReceiver: Auto-attached {} observers", injectedObservers.size());
         }
         // BUG-06: Đăng ký MqttCallback để nhận sự kiện connectionLost/reconnect
         mqttClient.setCallback(this);
@@ -86,7 +86,7 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
      */
     @Override
     public void connectionLost(Throwable cause) {
-        log.warn("MqttReceiver: Mất kết nối tới broker Adafruit. Sẽ re-subscribe sau khi kết nối lại.", cause);
+        log.warn("MqttReceiver: Lost connection to Adafruit broker. Will re-subscribe after reconnect.", cause);
         subscribed.set(false);
     }
 
@@ -97,7 +97,7 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
     @Override
     public void connectComplete(boolean reconnect, String serverURI) {
         if (reconnect) {
-            log.info("MqttReceiver: Đã kết nối lại tới broker [{}]. Đang re-subscribe...", serverURI);
+            log.info("MqttReceiver: Reconnected to broker [{}]. Re-subscribing...", serverURI);
             subscribeIfConnected();
         }
     }
@@ -120,7 +120,7 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
         }
         try {
             if (!mqttClient.isConnected()) {
-                log.warn("MqttReceiver: MQTT client chưa kết nối, tạm hoãn subscribe.");
+                log.warn("MqttReceiver: MQTT client not yet connected, deferring subscribe.");
                 return;
             }
 
@@ -128,9 +128,9 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
             String wildcardTopic = username + "/feeds/+";
             mqttClient.subscribe(wildcardTopic, this::processIncomingMessage);
             subscribed.set(true);
-            log.info("MqttReceiver: Đã Subscribe thành công topic: [{}]", wildcardTopic);
+            log.info("MqttReceiver: Subscribed successfully to topic: [{}]", wildcardTopic);
         } catch (Exception e) {
-            log.error("MqttReceiver: Không thể Subscribe topic Adafruit", e);
+            log.error("MqttReceiver: Failed to subscribe to Adafruit topic", e);
         }
     }
 
@@ -155,16 +155,16 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
                     try {
                         observer.update(data);
                     } catch (Exception e) {
-                        log.error("MqttReceiver: Observer [{}] gặp lỗi khi xử lý SensorData",
+                        log.error("MqttReceiver: Observer [{}] threw an error while processing SensorData",
                                 observer.getClass().getSimpleName(), e);
                     }
                 });
             } catch (java.util.concurrent.RejectedExecutionException ex) {
-                log.warn("MqttReceiver: Queue observer đầy, fallback chạy trực tiếp trên callback thread.");
+                log.warn("MqttReceiver: Observer queue full, falling back to callback thread.");
                 try {
                     observer.update(data);
                 } catch (Exception e) {
-                    log.error("MqttReceiver: Observer [{}] gặp lỗi khi xử lý SensorData",
+                    log.error("MqttReceiver: Observer [{}] threw an error while processing SensorData",
                             observer.getClass().getSimpleName(), e);
                 }
             }
@@ -183,12 +183,12 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
             // Xé nhỏ chuỗi Topic: "USERNAME/feeds/feedKey"
             String[] parts = topic.split("/");
             if (parts.length < 3) {
-                log.warn("MqttReceiver: Topic không hợp lệ '{}', bỏ qua message.", topic);
+                log.warn("MqttReceiver: Invalid topic '{}', ignoring message.", topic);
                 return;
             }
             String feedKey = parts[parts.length - 1]; // Lấy mảnh đuôi cùng
 
-            log.info("MqttReceiver: Nhận dữ liệu [{}] từ feed [{}]", payload, feedKey);
+            log.debug("MqttReceiver: Received data [{}] from feed [{}]", payload, feedKey);
 
             // Tra soát ID Thiết bị theo feed key và các alias phổ biến từ Adafruit.
             Optional<Device> deviceOpt = findDeviceByFeedAlias(feedKey);
@@ -220,7 +220,7 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
                             (Object) onlinePayload);
                     messagingTemplate.convertAndSend("/topic/admin/stats-changed",
                             (Object) java.util.Map.of("reason", "device_online"));
-                    log.info("MqttReceiver: Device [{}] vừa kết nối lại ONLINE.", device.getId());
+                    log.info("MqttReceiver: Device [{}] came back ONLINE.", device.getId());
                 }
 
                 String metricType = device.getModel().getMetricType().name();
@@ -234,13 +234,13 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
 
                 notifyObservers(sensorData);
             } else {
-                log.warn("MqttReceiver: FeedKey '{}' chưa được đăng ký cho Nông trại nào trên DB!", feedKey);
+                log.debug("MqttReceiver: FeedKey '{}' is not registered to any farm in DB!", feedKey);
             }
 
         } catch (NumberFormatException nfe) {
-            log.warn("MqttReceiver: Dữ liệu Adafruit không phải là số (Ignored message).");
+            log.debug("MqttReceiver: Payload from Adafruit is not a number — message ignored.");
         } catch (Exception e) {
-            log.error("MqttReceiver: Lỗi khi xử lý thông điệp Adafruit", e);
+            log.error("MqttReceiver: Error processing Adafruit message", e);
         }
     }
 
@@ -258,7 +258,7 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
             Optional<Device> deviceOpt = deviceRepository.findByAdafruitFeedKeyIgnoreCaseWithModelAndFarm(candidate);
             if (deviceOpt.isPresent()) {
                 if (!candidate.equals(rawFeedKey)) {
-                    log.info("MqttReceiver: Feed alias '{}' được map sang key '{}'.", rawFeedKey, candidate);
+                    log.info("MqttReceiver: Feed alias '{}' mapped to key '{}'.", rawFeedKey, candidate);
                 }
                 // Warm cache với key gốc và key chuẩn hóa
                 Device device = deviceOpt.get();
@@ -279,7 +279,7 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
     public void cacheFeedKey(String feedKey, Device device) {
         if (feedKey != null && device != null) {
             feedKeyCache.put(feedKey.toLowerCase(Locale.ROOT), device);
-            log.debug("MqttReceiver: Pre-warmed cache cho feed key [{}] → device [{}]", feedKey, device.getId());
+            log.debug("MqttReceiver: Pre-warmed cache for feed key [{}] -> device [{}]", feedKey, device.getId());
         }
     }
 
@@ -289,7 +289,7 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
     public void evictFeedKeyCache(String feedKey) {
         if (feedKey != null) {
             feedKeyCache.remove(feedKey.toLowerCase(Locale.ROOT));
-            log.debug("MqttReceiver: Đã evict cache cho feed key [{}]", feedKey);
+            log.debug("MqttReceiver: Evicted cache for feed key [{}]", feedKey);
         }
     }
 

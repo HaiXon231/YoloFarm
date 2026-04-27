@@ -20,13 +20,13 @@ public class ScheduledStrategy implements IrrigationStrategy {
 
     @Override
     public boolean executeControl(UUID farmId, UUID deviceId, String command) {
-        log.info("Đang xử lý ScheduledStrategy cho thiết bị {}...", deviceId);
+        log.info("Processing ScheduledStrategy for device {}...", deviceId);
 
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new RuntimeException("Device not found"));
 
         if (device.getOperatingMode() != OperatingModeEnum.AUTO) {
-            log.error("Từ chối thực thi tự động theo lịch vì thiết bị {} đang ở chế độ MANUAL", deviceId);
+            log.error("Refused scheduled auto execution because device {} is in MANUAL mode", deviceId);
             return false;
         }
 
@@ -43,7 +43,7 @@ public class ScheduledStrategy implements IrrigationStrategy {
         device.setIsActive("ON".equalsIgnoreCase(command));
         deviceRepository.save(device);
 
-        log.info("Đã gửi lệnh {} tự động (Theo Lịch Trình) cho thiết bị {}", command, deviceId);
+        log.info("Sent auto command {} (Scheduled) to device {}", command, deviceId);
         return true;
     }
 }

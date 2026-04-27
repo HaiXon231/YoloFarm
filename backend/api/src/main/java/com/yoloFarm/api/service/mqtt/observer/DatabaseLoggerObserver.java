@@ -29,9 +29,9 @@ public class DatabaseLoggerObserver implements Observer {
                     .createdAt(receivedAt)
                     .build();
             telemetryDataRepository.save(telemetry);
-            log.info("DatabaseLoggerObserver: Đã lưu TelemetryData thành công cho Device {}", data.deviceId());
+            log.info("DatabaseLoggerObserver: Successfully saved TelemetryData for Device {}", data.deviceId());
         } catch (Exception e) {
-            log.error("DatabaseLoggerObserver: Lỗi khi lưu TelemetryData vào DB", e);
+            log.error("DatabaseLoggerObserver: Error saving TelemetryData to DB", e);
         }
     }
 }

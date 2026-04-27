@@ -33,14 +33,14 @@ public class DeviceHeartbeatService {
     public void cleanupStaleConnections() {
         LocalDateTime threshold = LocalDateTime.now().minusMinutes(5);
 
-        log.debug("HeartbeatJanitor: Bắt đầu kiểm tra thiết bị mất kết nối (Threshold: {})", threshold);
+        log.debug("HeartbeatJanitor: Checking for stale devices (threshold: {})", threshold);
 
         try {
             // Bước 1: Tìm danh sách thiết bị SẮP bị offline trước khi UPDATE
             List<Device> staleDevices = deviceRepository.findStaleOnlineDevices(threshold);
 
             if (staleDevices.isEmpty()) {
-                log.debug("HeartbeatJanitor: Không có thiết bị nào cần đánh offline.");
+                log.debug("HeartbeatJanitor: No stale devices found.");
                 return;
             }
 
@@ -50,7 +50,7 @@ public class DeviceHeartbeatService {
 
             // Bước 2: UPDATE trạng thái trong DB
             deviceRepository.markStaleDevicesAsOffline(threshold);
-            log.info("HeartbeatJanitor: Đánh OFFLINE {} thiết bị thuộc {} nông trại.",
+            log.info("HeartbeatJanitor: Marked {} device(s) OFFLINE across {} farm(s).",
                     staleDevices.size(), byFarm.size());
 
             // Bước 3: Push WebSocket event cho từng farm liên quan
@@ -66,7 +66,7 @@ public class DeviceHeartbeatService {
                         "/topic/farm/" + farmId + "/device-status",
                         offlinePayload
                 );
-                log.debug("HeartbeatJanitor: Đã push offline event cho farm {}: {} thiết bị.",
+                log.debug("HeartbeatJanitor: Pushed offline event for farm {}: {} device(s).",
                         farmId, devices.size());
             });
 
@@ -74,7 +74,7 @@ public class DeviceHeartbeatService {
             messagingTemplate.convertAndSend("/topic/admin/stats-changed", (Object) Map.of("reason", "devices_offline"));
 
         } catch (Exception e) {
-            log.error("HeartbeatJanitor: Lỗi khi cập nhật trạng thái offline", e);
+            log.error("HeartbeatJanitor: Error updating offline status", e);
         }
     }
 }

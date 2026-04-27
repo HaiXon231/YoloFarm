@@ -34,7 +34,7 @@ public class RuleSchedulerService {
     @Scheduled(cron = "0 * * * * *")
     public void checkScheduledRules() {
         LocalDateTime now = LocalDateTime.now();
-        log.debug("RuleScheduler: Kiểm tra các luật SCHEDULE lúc {}", now);
+        log.debug("RuleScheduler: Checking SCHEDULE rules at {}", now);
 
         List<Rule> activeScheduledRules = ruleRepository
                 .findActiveScheduledRulesWithAssociations(RuleTypeEnum.SCHEDULE);
@@ -53,7 +53,7 @@ public class RuleSchedulerService {
                 CronExpression cronExp = CronExpression.parse(cron);
                 LocalDateTime nextExecution = cronExp.next(now.minusSeconds(1));
                 if (nextExecution != null && nextExecution.isBefore(now.plusSeconds(1))) {
-                    log.info("Rule Schedule Triggered: {} cho thiết bị {}", rule.getRuleName(),
+                    log.info("Rule schedule triggered: '{}' for device {}", rule.getRuleName(),
                             rule.getActionDevice().getId());
 
                     boolean success = irrigationContext.executeControl(
@@ -68,7 +68,7 @@ public class RuleSchedulerService {
                                 rule.getActionCommand().name(),
                                 clock.instant());
 
-                        String msg = String.format("Hệ thống tự động (Hẹn giờ): Đã %s [%s] theo luật [%s]",
+                        String msg = String.format("Auto system (Scheduled): %s [%s] by rule [%s]",
                                 rule.getActionCommand().name(),
                                 rule.getActionDevice().getName(),
                                 rule.getRuleName());
@@ -76,7 +76,7 @@ public class RuleSchedulerService {
                     }
                 }
             } catch (Exception e) {
-                log.error("Lỗi khi xử lý scheduled rule {}: {}", rule.getId(), e.getMessage(), e);
+                log.error("Error processing scheduled rule {}: {}", rule.getId(), e.getMessage(), e);
             }
         }
     }

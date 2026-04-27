@@ -73,7 +73,7 @@ public class AutoIrrigationSafetyService {
                     elapsedMinutes);
             notificationService.createSystemNotification(device.getFarm().getOwner().getId(), message);
 
-            log.warn("AutoSafety: Đã ép OFF thiết bị {} sau {} phút chạy AUTO liên tục",
+            log.warn("AutoSafety: Forced OFF device {} after {} minutes running continuously in AUTO mode",
                     device.getId(), elapsedMinutes);
         }
     }
