@@ -32,3 +32,4 @@ frontend/.env.*.local
 .github/
 .planning/codebase
 implementation_plan.md
+data.txt
