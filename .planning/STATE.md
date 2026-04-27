@@ -8,7 +8,7 @@
 See: `.planning/PROJECT.md` (updated 2026-04-27)
 
 **Core value:** Nông dân có thể tin tưởng rằng dữ liệu cảm biến chính xác và máy bơm bật/tắt đúng theo quy tắc.
-**Current focus:** Phase 3 — Frontend Test Suite
+**Current focus:** Phase 4 — Production Deployment
 
 ## Milestone Progress
 
@@ -16,8 +16,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-27)
 |---|---|---|
 | 1 | Per-Device Threshold Configuration | ✅ Complete |
 | 2 | Stability & Security Hardening | ✅ Complete |
-| 3 | Frontend Test Suite | 🔵 Next up |
-| 4 | Production Deployment | ⬜ Pending |
+| 3 | Frontend Test Suite | ✅ Complete |
+| 4 | Production Deployment | 🔵 Next up |
 
 ## Completed Work (Pre-GSD)
 
