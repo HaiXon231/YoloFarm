@@ -4,6 +4,7 @@ import api, { getApiErrorMessage } from '@/lib/axios'
 import type { DeviceWithModel } from '@/types'
 import RenameDeviceModal from './RenameDeviceModal'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import ThresholdEditModal from './ThresholdEditModal'
 
 interface SensorCardProps {
   device: DeviceWithModel
@@ -34,6 +35,7 @@ export default function SensorCard({ device, realtimeValue, isFlashing, onRename
   const [isRenameOpen, setIsRenameOpen] = useState(false)
   const [isRemoveConfirmOpen, setIsRemoveConfirmOpen] = useState(false)
   const [isRemoving, setIsRemoving] = useState(false)
+  const [isThresholdOpen, setIsThresholdOpen] = useState(false)
   const icon = metricIcons[device.metric_type || ''] || 'sensors'
   const label = metricLabels[device.metric_type || ''] || 'Cảm biến'
   const unit = metricUnits[device.metric_type || ''] || ''
@@ -86,6 +88,14 @@ export default function SensorCard({ device, realtimeValue, isFlashing, onRename
             <span className="material-symbols-outlined text-xs text-on-surface-variant">edit</span>
           </button>
           <button
+            onClick={() => setIsThresholdOpen(true)}
+            className="p-1 rounded-md hover:bg-surface-container opacity-0 group-hover/name:opacity-100 transition-all"
+            title="Cấu hình ngưỡng"
+            id={`threshold-btn-${device.id}`}
+          >
+            <span className="material-symbols-outlined text-xs text-on-surface-variant">tune</span>
+          </button>
+          <button
             onClick={() => setIsRemoveConfirmOpen(true)}
             className="p-1 rounded-md hover:bg-error-container/10 opacity-0 group-hover/name:opacity-100 transition-all"
             title="Yêu cầu thu hồi thiết bị"
@@ -125,10 +135,34 @@ export default function SensorCard({ device, realtimeValue, isFlashing, onRename
         <div className="mt-4 w-full bg-surface-container-low h-1.5 rounded-full overflow-hidden">
           <div
             className="bg-primary h-full rounded-full transition-all duration-500"
-            style={{ width: `${Math.min(Math.max(value, 0), 100)}%` }}
+            style={{
+              width: `${Math.min(
+                Math.max(
+                  ((value - (device.min_value ?? 0)) /
+                    ((device.max_value ?? 100) - (device.min_value ?? 0))) *
+                    100,
+                  0
+                ),
+                100
+              )}%`,
+            }}
           />
         </div>
       )}
+
+      <ThresholdEditModal
+        isOpen={isThresholdOpen}
+        onClose={() => setIsThresholdOpen(false)}
+        deviceId={device.id}
+        deviceName={device.name}
+        currentMin={device.min_value ?? null}
+        currentMax={device.max_value ?? null}
+        unit={unit}
+        onSuccess={() => {
+          setIsThresholdOpen(false)
+          onRenameSuccess?.()
+        }}
+      />
     </div>
   )
 }

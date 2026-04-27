@@ -88,6 +88,8 @@ export interface DeviceResponse {
   last_seen: string | null
   operating_mode: OperatingMode
   is_active: boolean
+  min_value: number | null
+  max_value: number | null
 }
 
 export interface AdminStatsResponse {
