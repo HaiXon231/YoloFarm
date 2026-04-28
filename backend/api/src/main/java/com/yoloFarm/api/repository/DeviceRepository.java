@@ -36,6 +36,12 @@ public interface DeviceRepository extends JpaRepository<Device, UUID> {
         boolean existsByAdafruitFeedKeyIgnoreCase(String adafruitFeedKey);
 
         /**
+         * Kiểm tra trùng tên thiết bị trong cùng 1 nông trại của chủ (case-insensitive).
+         * Dùng để ngăn 2 device có cùng feed name trên Adafruit IO.
+         */
+        boolean existsByNameIgnoreCaseAndFarmId(String name, UUID farmId);
+
+        /**
          * Lấy Device kèm Model + Farm (JOIN FETCH) để tránh LazyInitializationException
          * Dùng cho MQTT callback (ngoài Transactional context)
          */

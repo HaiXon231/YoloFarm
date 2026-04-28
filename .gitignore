@@ -30,6 +30,7 @@ frontend/.env.*.local
 .agent/
 .codex/
 .github/
-.planning/codebase
+.planning
 implementation_plan.md
 data.txt
+CV.tex

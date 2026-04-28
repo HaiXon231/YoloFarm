@@ -68,10 +68,19 @@ public class DeviceService {
                 .orElseThrow(
                         () -> new EntityNotFoundException("DeviceModel not found with id: " + request.getModelId()));
 
+        // Kiểm tra trùng tên thiết bị trong cùng nông trại (tên = feed name trên
+        // Adafruit IO)
+        String normalizedName = request.getName().trim();
+        if (deviceRepository.existsByNameIgnoreCaseAndFarmId(normalizedName, farm.getId())) {
+            throw new ConflictException(
+                    "Tên thiết bị '" + normalizedName + "' đã tồn tại trong nông trại này. "
+                            + "Vui lòng dùng tên khác để tránh trùng feed name trên Adafruit IO.");
+        }
+
         Device device = Device.builder()
                 .farm(farm)
                 .model(model)
-                .name(request.getName())
+                .name(normalizedName)
                 .status(DeviceStatusEnum.PENDING)
                 .connectionStatus(ConnectionStatusEnum.OFFLINE)
                 .operatingMode(OperatingModeEnum.MANUAL)
@@ -94,7 +103,11 @@ public class DeviceService {
 
         if (newName != null && !newName.isBlank()) {
             String normalizedName = newName.trim();
-            if (!normalizedName.equals(device.getName())) {
+            if (!normalizedName.equalsIgnoreCase(device.getName())) {
+                if (deviceRepository.existsByNameIgnoreCaseAndFarmId(normalizedName, device.getFarm().getId())) {
+                    throw new ConflictException(
+                            "Tên thiết bị '" + normalizedName + "' đã được sử dụng.");
+                }
                 if (device.getAdafruitFeedKey() != null && !device.getAdafruitFeedKey().isBlank()) {
                     adafruitApiService.updateFeedName(device.getAdafruitFeedKey(), normalizedName);
                     evictFeedKeyCacheSafe(device.getAdafruitFeedKey());
@@ -180,13 +193,15 @@ public class DeviceService {
             devices = deviceRepository
                     .findByStatusIn(List.of(DeviceStatusEnum.PENDING, DeviceStatusEnum.PENDING_REMOVAL));
         } else {
-            // BUG-04: Validate enum string trước valueOf() để trả lỗi rõ ràng, không lộ tên các enum value nội bộ
+            // BUG-04: Validate enum string trước valueOf() để trả lỗi rõ ràng, không lộ tên
+            // các enum value nội bộ
             DeviceStatusEnum statusEnum;
             try {
                 statusEnum = DeviceStatusEnum.valueOf(status.toUpperCase());
             } catch (IllegalArgumentException ex) {
                 throw new IllegalArgumentException(
-                        "Trạng thái không hợp lệ: '" + status + "'. Chấp nhận: PENDING, PENDING_REMOVAL, ACTIVE, REJECTED");
+                        "Trạng thái không hợp lệ: '" + status
+                                + "'. Chấp nhận: PENDING, PENDING_REMOVAL, ACTIVE, REJECTED");
             }
             devices = deviceRepository.findByStatus(statusEnum);
         }
@@ -218,8 +233,10 @@ public class DeviceService {
         device.setStatus(DeviceStatusEnum.ACTIVE);
         Device saved = deviceRepository.save(device);
 
-        // BUG-08: evictFeedKeyCacheSafe() là no-op khi feed key mới approve — chưa có entry nào trong cache.
-        // Mục đích: đảm bảo không bị stale entry nếu admin approve lại cùng feed key (edge case).
+        // BUG-08: evictFeedKeyCacheSafe() là no-op khi feed key mới approve — chưa có
+        // entry nào trong cache.
+        // Mục đích: đảm bảo không bị stale entry nếu admin approve lại cùng feed key
+        // (edge case).
         // Lần nhận MQTT đầu tiên sẽ cache miss và tự warm lại từ DB.
         evictFeedKeyCacheSafe(resolvedFeedKey);
 

@@ -7,15 +7,12 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-  flyway:
-    enabled: true
-    baseline-on-migrate: true
-    show-sql: false
-    properties:
-      hibernate:
-        "format_sql": true
   jackson:
     property-naming-strategy: SNAKE_CASE
+
+logging:
+  level:
+    com.yoloFarm: INFO
 
 jwt:
   secret-key: ${JWT_SECRET_KEY}

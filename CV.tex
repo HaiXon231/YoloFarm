@@ -1,0 +1,99 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.56in]{geometry}
+\usepackage[colorlinks=true,urlcolor=accent,linkcolor=accent]{hyperref}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{charter}
+\usepackage{microtype}
+
+\definecolor{accent}{HTML}{1E4EA1}
+\definecolor{textdark}{HTML}{1E1E1E}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2pt}
+\pagenumbering{gobble}
+\color{textdark}
+
+\newcommand{\cvitem}[1]{\item \normalsize #1}
+\newcommand{\kw}[1]{\textbf{#1}}
+\newcommand{\cvsection}[1]{
+  \vspace{2pt}
+  \noindent{\large\bfseries\scshape #1}\hspace{0.45em}\textcolor{black!55}{\leaders\hrule height 0.5pt\hfill}\par\vspace{1pt}
+}
+
+% Đã sửa lại phần projectheader để không bị thừa dòng và căn phải chữ GitHub
+\newcommand{\projectheader}[2]{
+  \vspace{4pt}
+  \noindent\textcolor{accent}{\textbf{#1}} \hfill {\footnotesize\href{#2}{GitHub}}\par
+  \vspace{2pt}
+}
+
+\begin{document}
+
+\begin{center}
+{\fontsize{22}{24}\selectfont \textbf{Dang Hai Son}}\\[-1pt]
+{\large \textbf{Software Engineer} \;|\; Ho Chi Minh City}\\[1pt]
+\normalsize
+\href{tel:+84969528920}{(+84) 969 528 920}
+\;\textbullet\;
+\href{mailto:danghaison321@gmail.com}{danghaison321@gmail.com}
+\;\textbullet\;
+\href{https://github.com/HaiXon231}{github.com/HaiXon231}
+\;\textbullet\;
+\href{https://www.instagram.com/haixon231}{instagram.com/haixon231}
+\end{center}
+
+\cvsection{PROFILE}
+\normalsize Third-year Computer Science student at Ho Chi Minh City University of Technology with a strong foundation in backend development, specializing in Java and Go. Seeking a Software Engineer Intern position to apply robust engineering practices, enhance system scalability, and contribute to high-performance backend architectures in collaborative product teams.
+
+\cvsection{EDUCATION}
+\textbf{Ho Chi Minh City University of Technology - VNU-HCM} \hfill \textit{Sep 2023 -- Jun 2027}\\
+\normalsize Bachelor of Engineering in Computer Science \hfill \textit{GPA: 8.06/10}
+
+\cvsection{PROJECTS}
+\projectheader{YoloFarm -- IoT Smart Farm Management System}{https://github.com/HaiXon231/YoloFarm}
+\begin{itemize}[leftmargin=*,itemsep=1pt,topsep=0pt,parsep=0pt,partopsep=0pt]
+  \cvitem{Designed and built a \kw{Spring Boot 4} backend exposing a RESTful API for IoT device lifecycle management across a two-role system (Admin/Farmer) with \kw{JWT-based authentication} and \kw{Spring Security} access control.}
+  \cvitem{Integrated \kw{Adafruit IO MQTT} (Paho client) to ingest real-time telemetry from physical sensors; implemented a \kw{WebSocket/STOMP} broker to push live data to the frontend without polling.}
+  \cvitem{Built a rule engine supporting both \kw{condition-based} (threshold trigger) and \kw{schedule-based} (cron) automation rules, with a safety watchdog that auto-disables actuators to prevent over-irrigation.}
+  \cvitem{Implemented Adafruit IO REST API integration for programmatic feed provisioning and teardown; designed feed-key uniqueness validation and a MQTT-to-WebSocket bridge with in-memory cache eviction.}
+  \cvitem{Orchestrated \kw{PostgreSQL LISTEN/NOTIFY} signalling to synchronise a Python Digital Twin simulator with live device approvals and removals without polling.}
+  \cvitem{Containerised the application with \kw{Docker} and deployed to \kw{Hugging Face Spaces}; frontend (React/TypeScript/Vite) deployed to \kw{Vercel}.}
+\end{itemize}
+\normalsize \textit{Tech: Java 21, Spring Boot 4, Spring Security (JWT), JPA, MQTT, WebSocket/STOMP, PostgreSQL, Adafruit IO, Docker}
+
+
+\projectheader{File Sharing Web Backend}{https://github.com/HaiXon231/file-sharing-web-backend2}
+\begin{itemize}[leftmargin=*,itemsep=1pt,topsep=0pt,parsep=0pt,partopsep=0pt]
+  \cvitem{Architected a layered backend (handler/service/repository) using \kw{Go}, \kw{Gin}, and \kw{PostgreSQL} for maintainable development and clear module boundaries.}
+  \cvitem{Implemented security-critical features including \kw{JWT authentication}, \kw{TOTP-based 2FA}, password-protected shares, and whitelist-based file access.}
+  \cvitem{Designed database schema and query strategy for file sharing permissions, metadata, and download statistics.}
+  \cvitem{Built testing structure for auth flows and authored API/deployment docs; contributed \kw{Docker + Nginx} deployment and \kw{GitHub Actions CI/CD} pipelines.}
+\end{itemize}
+\normalsize \textit{Tech: Go, Gin, PostgreSQL, JWT, TOTP, Docker, Nginx, GitHub Actions}
+
+\projectheader{Udemy-like Course Platform Backend}{https://github.com/HaiXon231/udemy}
+\begin{itemize}[leftmargin=*,itemsep=1pt,topsep=0pt,parsep=0pt,partopsep=0pt]
+  \cvitem{Implemented the student domain and enrollment lifecycle using \kw{Spring Data JPA} and \kw{Spring Security} for role-based access control.}
+  \cvitem{Engineered an assessment engine with automated test creation, \kw{SQL-driven} question assignment, and real-time scoring.}
+  \cvitem{Optimized session management with \kw{Spring Session (JDBC)} and refined the \kw{SQL Server} schema for efficient course and student progress tracking.}
+\end{itemize}
+\normalsize \textit{Tech: Java 17, Spring Boot, Spring Data JPA, Spring Security, SQL Server, Spring Session}
+
+\cvsection{TECHNICAL SKILLS}
+\normalsize
+\textbf{Programming Languages:} Java, Go, Python, C++ \\
+\textbf{Backend:} Spring Boot, Gin, REST API Design. \\
+\textbf{Database:} MySQL, SQL Server, PostgreSQL. \\
+\textbf{Testing \& Documentation:} Go test, JUnit, Postman, OpenAPI/Markdown API Docs \\
+\textbf{DevOps / Tools:} Git, GitHub, GitHub Actions, Docker, Nginx, Linux Basics 
+
+\cvsection{OTHER SKILLS}
+\normalsize
+\textbf{Soft Skills:} Communication, Teamwork, Problem Solving, Self-learning, Technical Documentation Reading \\
+\textbf{Assistant Tools:} ChatGPT, Gemini, Copilot, Antigravity
+
+\end{document}
