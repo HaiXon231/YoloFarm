@@ -1,0 +1,83 @@
+@startuml
+!theme plain
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+actor Farmer
+actor Admin
+
+rectangle "Frontend (React + Vite)" as FE {
+  component "REST client\naxios.ts" as FE_REST
+  component "Realtime client\nwebsocket.ts" as FE_WS
+}
+
+node "Backend API\nSpring Boot" as BE {
+  package "Entry" {
+    component "Controllers\nAuth/Farm/Device/Rule/..." as CTRL
+    component "WebSocket Endpoint\n/ws SockJS + STOMP" as WS_EP
+  }
+
+  package "Core Services" {
+    component "Auth + Security" as SEC
+    component "RuleService" as RULE_SVC
+    component "DeviceService" as DEV_SVC
+    component "NotificationService" as NOTI_SVC
+    component "Device Threshold API\nPATCH /api/v1/devices/{id}/threshold" as THRESH_API
+  }
+
+  package "Automation & IoT" {
+    component "MqttReceiverService" as MQTT_RX
+    component "RuleEngineObserver" as RULE_OBS
+    component "RuleSchedulerService" as RULE_SCH
+    component "AutoIrrigationSafetyService" as AUTO_SAFE
+    component "IrrigationContext + Strategies" as STRATEGY
+  }
+
+  package "Persistence" {
+    component "Repositories\nJpaRepository + Projection" as REPO
+  }
+}
+
+database "PostgreSQL\n(users, farms, devices, rules,\ntelemetry_data, notifications, models)" as DB
+cloud "Adafruit IO MQTT Broker" as AIO
+rectangle "Digital Twin Simulator\nPython" as SIM
+
+Farmer --> FE
+Admin --> FE
+
+FE_REST --> CTRL : HTTPS REST
+FE_WS --> WS_EP : STOMP subscribe
+
+CTRL --> SEC
+CTRL --> RULE_SVC
+CTRL --> DEV_SVC
+CTRL --> THRESH_API
+THRESH_API --> DEV_SVC : set minValue/maxValue
+RULE_SVC --> REPO
+DEV_SVC --> REPO
+NOTI_SVC --> REPO
+REPO --> DB
+
+SIM --> AIO : publish telemetry
+AIO --> MQTT_RX : subscribe username/feeds/+
+MQTT_RX --> RULE_OBS : notify(sensor data)
+MQTT_RX --> STRATEGY : command path
+MQTT_RX --> REPO : read device + min/max threshold
+RULE_OBS --> STRATEGY : auto ON/OFF
+RULE_OBS --> NOTI_SVC
+RULE_SCH --> STRATEGY : scheduled ON/OFF
+AUTO_SAFE --> STRATEGY : safety forced OFF
+
+WS_EP --> FE_WS : telemetry + alerts
+
+note right of BE
+  Key runtime loops:
+  1) MQTT telemetry -> Observer chain
+  2) Cron scheduler -> strategy execution
+  3) Safety watchdog -> forced auto OFF
+  4) Device min/max thresholds are configurable
+     via REST and validated as non-blocking MQTT warnings
+end note
+
+@enduml

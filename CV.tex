@@ -26,9 +26,9 @@
 
 % Đã sửa lại phần projectheader để không bị thừa dòng và căn phải chữ GitHub
 \newcommand{\projectheader}[2]{
-  \vspace{4pt}
-  \noindent\textcolor{accent}{\textbf{#1}} \hfill {\footnotesize\href{#2}{GitHub}}\par
   \vspace{2pt}
+  \noindent\textcolor{accent}{\textbf{#1}} \hfill {\footnotesize\href{#2}{GitHub}}\par
+  \vspace{1pt}
 }
 
 \begin{document}
@@ -56,15 +56,12 @@
 \cvsection{PROJECTS}
 \projectheader{YoloFarm -- IoT Smart Farm Management System}{https://github.com/HaiXon231/YoloFarm}
 \begin{itemize}[leftmargin=*,itemsep=1pt,topsep=0pt,parsep=0pt,partopsep=0pt]
-  \cvitem{Designed and built a \kw{Spring Boot 4} backend exposing a RESTful API for IoT device lifecycle management across a two-role system (Admin/Farmer) with \kw{JWT-based authentication} and \kw{Spring Security} access control.}
-  \cvitem{Integrated \kw{Adafruit IO MQTT} (Paho client) to ingest real-time telemetry from physical sensors; implemented a \kw{WebSocket/STOMP} broker to push live data to the frontend without polling.}
-  \cvitem{Built a rule engine supporting both \kw{condition-based} (threshold trigger) and \kw{schedule-based} (cron) automation rules, with a safety watchdog that auto-disables actuators to prevent over-irrigation.}
-  \cvitem{Implemented Adafruit IO REST API integration for programmatic feed provisioning and teardown; designed feed-key uniqueness validation and a MQTT-to-WebSocket bridge with in-memory cache eviction.}
-  \cvitem{Orchestrated \kw{PostgreSQL LISTEN/NOTIFY} signalling to synchronise a Python Digital Twin simulator with live device approvals and removals without polling.}
-  \cvitem{Containerised the application with \kw{Docker} and deployed to \kw{Hugging Face Spaces}; frontend (React/TypeScript/Vite) deployed to \kw{Vercel}.}
+  \cvitem{Built a \kw{Spring Boot 4} REST backend for IoT farm management with \kw{JWT auth}, \kw{Spring Security} RBAC (Admin/Farmer); integrated \kw{Adafruit IO MQTT} (Paho) for sensor ingestion and \kw{WebSocket/STOMP} for real-time frontend push.}
+  \cvitem{Designed a rule engine with \kw{condition-based} (threshold) and \kw{schedule-based} (cron) automation; implemented a safety watchdog that auto-disables actuators to prevent over-irrigation.}
+  \cvitem{Integrated Adafruit IO REST API for programmatic feed provisioning; used \kw{PostgreSQL LISTEN/NOTIFY} to synchronise a Python Digital Twin simulator event-driven on device approval and removal.}
+  \cvitem{Containerised with \kw{Docker}, deployed backend to \kw{Hugging Face Spaces}; frontend (React/TypeScript) deployed to Vercel.}
 \end{itemize}
-\normalsize \textit{Tech: Java 21, Spring Boot 4, Spring Security (JWT), JPA, MQTT, WebSocket/STOMP, PostgreSQL, Adafruit IO, Docker}
-
+\normalsize \textit{Tech: Java 21, Spring Boot 4, Spring Security, Spring Data JPA, MQTT, WebSocket/STOMP, PostgreSQL, Adafruit IO, Docker}
 
 \projectheader{File Sharing Web Backend}{https://github.com/HaiXon231/file-sharing-web-backend2}
 \begin{itemize}[leftmargin=*,itemsep=1pt,topsep=0pt,parsep=0pt,partopsep=0pt]
@@ -79,7 +76,7 @@
 \begin{itemize}[leftmargin=*,itemsep=1pt,topsep=0pt,parsep=0pt,partopsep=0pt]
   \cvitem{Implemented the student domain and enrollment lifecycle using \kw{Spring Data JPA} and \kw{Spring Security} for role-based access control.}
   \cvitem{Engineered an assessment engine with automated test creation, \kw{SQL-driven} question assignment, and real-time scoring.}
-  \cvitem{Optimized session management with \kw{Spring Session (JDBC)} and refined the \kw{SQL Server} schema for efficient course and student progress tracking.}
+  \cvitem{Refined the \kw{SQL Server} schema for efficient course and student progress tracking.}
 \end{itemize}
 \normalsize \textit{Tech: Java 17, Spring Boot, Spring Data JPA, Spring Security, SQL Server, Spring Session}
 

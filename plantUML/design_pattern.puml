@@ -1,0 +1,45 @@
+@startuml
+!theme plain
+skinparam shadowing false
+
+start
+:Telemetry arrives from MQTT;
+: MqttReceiverService parses topic + payload;
+:Read device minValue/maxValue;
+if (Out of range?) then (yes)
+  :Write WARN log only (non-blocking);
+endif
+
+fork
+  :DatabaseLoggerObserver;
+  :Save telemetry_data row;
+fork again
+  :WebSocketNotifierObserver;
+  :Push /topic/farm/{farmId}/telemetry;
+fork again
+  :RuleEngineObserver;
+  :Find active CONDITION rules;
+  if (Condition met?) then (yes)
+    if (Cooldown active?) then (yes)
+      :Skip command;
+    else (no)
+      :IrrigationContext.executeControl(AutoThresholdStrategy,...);
+      :markRuleCommandExecuted + markAutoCommand;
+      :Create notification;
+    endif
+  else (no)
+    :Ignore;
+  endif
+end fork
+
+:RuleSchedulerService runs every minute;
+:Execute SCHEDULE rules via ScheduledStrategy;
+
+:AutoIrrigationSafetyService watchdog runs fixed delay;
+if (AUTO ON > max minutes?) then (yes)
+  :Force OFF via AutoThresholdStrategy;
+  :Create safety notification;
+endif
+
+stop
+@enduml

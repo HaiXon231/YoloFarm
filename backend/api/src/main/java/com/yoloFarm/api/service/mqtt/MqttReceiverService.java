@@ -19,7 +19,6 @@ import jakarta.annotation.PreDestroy;
 
 import java.time.Instant;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -83,7 +82,8 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
 
     /**
      * BUG-06: Được Paho gọi khi mất kết nối broker.
-     * Reset subscribed flag để subscribeIfConnected() sẽ re-subscribe sau khi reconnect.
+     * Reset subscribed flag để subscribeIfConnected() sẽ re-subscribe sau khi
+     * reconnect.
      */
     @Override
     public void connectionLost(Throwable cause) {

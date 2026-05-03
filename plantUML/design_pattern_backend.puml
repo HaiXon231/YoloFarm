@@ -1,0 +1,103 @@
+@startuml
+!theme plain
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+package "Observer Pattern" {
+  interface Subject {
+    +attach(o)
+    +detach(o)
+    +notifyObservers(data)
+  }
+
+  interface Observer {
+    +update(data)
+  }
+
+  class MqttReceiverService {
+    +processIncomingMessage(topic, message)
+    +check minValue/maxValue warning
+  }
+  class DatabaseLoggerObserver
+  class WebSocketNotifierObserver
+  class RuleEngineObserver
+
+  Subject <|.. MqttReceiverService
+  Observer <|.. DatabaseLoggerObserver
+  Observer <|.. WebSocketNotifierObserver
+  Observer <|.. RuleEngineObserver
+
+  MqttReceiverService --> DatabaseLoggerObserver : notify
+  MqttReceiverService --> WebSocketNotifierObserver : notify
+  MqttReceiverService --> RuleEngineObserver : notify
+}
+
+package "Automation Runtime State" {
+  class AutomationRuntimeStateService {
+    +isRuleCommandInCooldown(...)
+    +markRuleCommandExecuted(...)
+    +getAutoOnSince(deviceId)
+    +markAutoCommand(deviceId, command, now)
+    +evictDeviceState(deviceId)
+    +evictRuleState(ruleId)
+  }
+
+  class RuleService
+  class DeviceService
+  class RuleSchedulerService
+  class AutoIrrigationSafetyService
+  class RuleEngineObserver
+
+  RuleEngineObserver --> AutomationRuntimeStateService
+  RuleSchedulerService --> AutomationRuntimeStateService
+  AutoIrrigationSafetyService --> AutomationRuntimeStateService
+  RuleService --> AutomationRuntimeStateService : cleanup rule state
+  DeviceService --> AutomationRuntimeStateService : cleanup device state
+}
+
+package "Device Threshold Config" {
+  class Device {
+    +minValue : Float
+    +maxValue : Float
+  }
+
+  class DeviceController {
+    +PATCH /devices/{id}/threshold
+  }
+
+  class DeviceService {
+    +updateThreshold(ownerId, deviceId, minValue, maxValue)
+  }
+
+  class DeviceRepository
+
+  DeviceController --> DeviceService : update threshold
+  DeviceService --> DeviceRepository : save min/max
+  DeviceRepository --> Device : persist
+  MqttReceiverService --> Device : read min/max
+}
+
+package "Scheduling" {
+  class RuleSchedulerService {
+    +checkScheduledRules()
+  }
+
+  class DeviceHeartbeatService {
+    +checkHeartbeat()
+  }
+
+  class AutoIrrigationSafetyService {
+    +enforceAutoOffSafety()
+  }
+}
+
+note right of MqttReceiverService
+  Uses bounded ThreadPoolExecutor
+  for observer dispatch and fallback
+  to caller thread when queue is full.
+  min/max threshold check only logs warning,
+  does not block telemetry pipeline.
+end note
+
+@enduml

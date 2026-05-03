@@ -1211,6 +1211,49 @@ paths:
                       is_read: false
                       created_at: "2023-10-02T10:00:00Z"
 
+  /api/v1/notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Lấy số lượng thông báo chưa đọc
+      responses:
+        '200':
+          description: Số lượng thông báo chưa đọc
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unread_count:
+                    type: integer
+              examples:
+                ThanhCong:
+                  summary: Trả về số lượng chưa đọc
+                  value:
+                    unread_count: 3
+
+  /api/v1/notifications/read-all:
+    put:
+      tags: [Notifications]
+      summary: Đánh dấu tất cả thông báo là đã đọc
+      responses:
+        '200':
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  updated_count:
+                    type: integer
+              examples:
+                ThanhCong:
+                  summary: Phản hồi thành công
+                  value:
+                    message: "Đã đánh dấu tất cả thông báo là đã đọc."
+                    updated_count: 5
+
   /api/v1/notifications/{notificationId}/read:
     put:
       tags: [Notifications]
