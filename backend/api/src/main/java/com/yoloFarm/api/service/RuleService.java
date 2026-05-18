@@ -111,8 +111,8 @@ public class RuleService {
         Rule rule = ruleRepository.findByIdAndFarmOwnerId(ruleId, ownerId)
                 .orElseThrow(() -> new EntityNotFoundException("Rule not found with id: " + ruleId));
 
-        Optional<Rule> complementaryOpt = findComplementaryRule(rule);
         if (isActive) {
+            Optional<Rule> complementaryOpt = findComplementaryRule(rule);
             Rule complementaryRule = complementaryOpt.orElseThrow(
                     () -> new IllegalStateException(
                             "Rule chỉ được bật khi đã có cặp ON và OFF cho cùng action device."));
@@ -121,11 +121,12 @@ public class RuleService {
             rule.setIsActive(true);
             complementaryRule.setIsActive(true);
             ruleRepository.save(complementaryRule);
-        } else if (complementaryOpt.isPresent()) {
-            Rule complementaryRule = complementaryOpt.get();
-            if (Boolean.TRUE.equals(complementaryRule.getIsActive())) {
-                complementaryRule.setIsActive(false);
-                ruleRepository.save(complementaryRule);
+        } else {
+            for (Rule pairedRule : findRulesInPairGroup(rule)) {
+                if (!pairedRule.getId().equals(rule.getId()) && Boolean.TRUE.equals(pairedRule.getIsActive())) {
+                    pairedRule.setIsActive(false);
+                    ruleRepository.save(pairedRule);
+                }
             }
         }
 
@@ -284,6 +285,24 @@ public class RuleService {
         }
 
         return Optional.of(filtered.get(0));
+    }
+
+    private List<Rule> findRulesInPairGroup(Rule rule) {
+        if (rule.getRuleType() == RuleTypeEnum.CONDITION) {
+            if (rule.getTriggerDevice() == null || rule.getTriggerDevice().getId() == null) {
+                return List.of(rule);
+            }
+            return ruleRepository.findByFarmIdAndActionDeviceIdAndTriggerDeviceIdAndRuleType(
+                    rule.getFarm().getId(),
+                    rule.getActionDevice().getId(),
+                    rule.getTriggerDevice().getId(),
+                    RuleTypeEnum.CONDITION);
+        }
+
+        return ruleRepository.findByFarmIdAndActionDeviceIdAndRuleType(
+                rule.getFarm().getId(),
+                rule.getActionDevice().getId(),
+                RuleTypeEnum.SCHEDULE);
     }
 
     private void validatePairLogic(Rule rule, Rule complementaryRule) {

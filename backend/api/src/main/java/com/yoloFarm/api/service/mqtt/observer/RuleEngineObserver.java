@@ -55,6 +55,16 @@ public class RuleEngineObserver implements Observer {
             if (automationRuntimeStateService.isRuleCommandInCooldown(
                     rule.getId(), command, ruleCommandCooldownSeconds, now)) {
                 log.debug("Rule {} is in cooldown for command {}", rule.getId(), command);
+                if (automationRuntimeStateService.shouldNotifyRuleCooldown(
+                        rule.getId(), command, ruleCommandCooldownSeconds, now)) {
+                    String msg = String.format(
+                            "Auto system: skipped repeated %s command for [%s] because rule [%s] is still in %d-second cooldown.",
+                            command,
+                            rule.getActionDevice().getName(),
+                            rule.getRuleName(),
+                            ruleCommandCooldownSeconds);
+                    notificationService.createSystemNotification(rule.getFarm().getOwner().getId(), msg);
+                }
                 continue;
             }
 

@@ -4,7 +4,6 @@ import com.yoloFarm.api.dto.request.FarmCreateRequest;
 import com.yoloFarm.api.dto.response.FarmResponse;
 import com.yoloFarm.api.entity.User;
 import com.yoloFarm.api.enums.RoleEnum;
-import com.yoloFarm.api.repository.FarmRepository;
 import com.yoloFarm.api.repository.UserRepository;
 import com.yoloFarm.api.service.FarmService;
 import org.junit.jupiter.api.Test;

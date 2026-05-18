@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import api, { getApiErrorMessage } from '@/lib/axios'
 import type { DeviceWithModel } from '@/types'
@@ -19,9 +19,13 @@ export default function ActuatorCard({ device, onUpdate }: ActuatorCardProps) {
   const [isRemoveConfirmOpen, setIsRemoveConfirmOpen] = useState(false)
   const [isRemoveLoading, setIsRemoveLoading] = useState(false)
 
-  const isOnline = device.connection_status === 'ONLINE'
   const isAuto = localMode === 'AUTO'
   const icon = device.metric_type === 'PUMP' ? 'water_pump' : 'light_mode'
+
+  useEffect(() => {
+    setLocalMode(device.operating_mode)
+    setIsOn(device.is_active)
+  }, [device.operating_mode, device.is_active])
 
   const handleModeToggle = async () => {
     const newMode = isAuto ? 'MANUAL' : 'AUTO'
@@ -98,15 +102,33 @@ export default function ActuatorCard({ device, onUpdate }: ActuatorCardProps) {
               </button>
             </div>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className={isOnline ? 'badge-online' : 'badge-offline'}>
-                {isOnline ? 'Online' : 'Offline'}
-              </span>
               <span className={isAuto ? 'badge-auto' : 'badge-manual'}>
                 {isAuto ? 'Auto' : 'Manual'}
+              </span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${isOn
+                ? 'bg-primary-container text-primary'
+                : 'bg-surface-container-high text-on-surface-variant'
+                }`}>
+                {isOn ? 'ON' : 'OFF'}
               </span>
             </div>
           </div>
         </div>
+      </div>
+
+      <div className={`flex items-center justify-between py-3 px-4 rounded-xl mb-3 border ${isOn
+        ? 'bg-primary-container/20 border-primary/20'
+        : 'bg-surface-container-low border-outline-variant/40'
+        }`}>
+        <div className="flex items-center gap-2">
+          <span className={`material-symbols-outlined text-lg ${isOn ? 'text-primary' : 'text-on-surface-variant'}`}>
+            {isOn ? 'toggle_on' : 'toggle_off'}
+          </span>
+          <span className="text-sm font-medium text-on-surface-variant">Trạng thái thiết bị</span>
+        </div>
+        <span className={`text-sm font-black ${isOn ? 'text-primary' : 'text-on-surface'}`}>
+          {isOn ? 'Đang bật' : 'Đang tắt'}
+        </span>
       </div>
 
       {/* Mode Toggle */}

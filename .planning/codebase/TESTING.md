@@ -1,121 +1,241 @@
-# TESTING.md — Test Structure & Practices (Backend)
+# Testing Patterns
 
-**Last mapped:** 2026-04-28
+**Analysis Date:** 2026-05-18
 
----
+## Test Framework
 
-## Scope
-- `backend/api/` only
+**Runner:**
+- Backend: JUnit 5 through Spring Boot test dependencies in `backend/api/pom.xml`.
+- Backend Spring tests: `@SpringBootTest`, `@WebMvcTest`, `@AutoConfigureMockMvc`, and Spring Security test helpers in `backend/api/src/test/java/com/yoloFarm/api/`.
+- Frontend: Vitest 4.1.5 configured inside `frontend/vite.config.ts`.
+- Frontend DOM tests: jsdom environment with React Testing Library and jest-dom setup in `frontend/src/setupTests.ts`.
+- Simulator: no automated test runner detected; `simulator/digital-twin/tools/e2e_create_device_and_verify.py` is a manual E2E verification script.
 
----
+**Assertion Library:**
+- Backend: JUnit Jupiter assertions (`assertEquals`, `assertThrows`, `assertTrue`, `assertFalse`) and Spring MockMvc result matchers (`status`, `jsonPath`).
+- Backend mocking/verification: Mockito (`when`, `verify`, `never`, `timeout`, `@Mock`, `@InjectMocks`, `@MockitoBean`).
+- Frontend: Vitest `expect` plus `@testing-library/jest-dom` matchers.
 
-## Framework & Dependencies
-- **JUnit 5** (via `spring-boot-starter-test`)
-- **Mockito** (via `spring-boot-starter-test` + `@MockitoBean`)
-- **Spring Boot Test** (`@SpringBootTest` for integration, `@WebMvcTest` for slice tests)
-- **H2** (runtime scope) used for integration tests
-- **Test dependencies in pom.xml:**
-  - `spring-boot-starter-test` (test)
-  - `spring-boot-starter-data-jpa-test` (test)
-  - `spring-boot-starter-security-test` (test)
-  - `spring-boot-starter-validation-test` (test)
-  - `spring-boot-starter-webmvc-test` (test)
-  - `com.h2database:h2` (runtime)
+**Run Commands:**
+```bash
+cd backend/api && ./mvnw test              # Run all backend tests on Unix-like shells
+cd backend/api && .\mvnw.cmd test          # Run all backend tests on PowerShell
+cd backend/api && .\mvnw.cmd test -Dtest=RuleEngineObserverTest  # Run one backend test class
+cd frontend && npx vitest                  # Run frontend tests; package.json has no test script
+cd frontend && npx vitest --watch          # Frontend watch mode
+cd frontend && npx vitest --coverage       # Coverage command shape; coverage provider is not configured
+```
 
----
+## Test File Organization
 
-## Test Location
-- Root: `backend/api/src/test/java/com/yoloFarm/api/`
-- Subpackages: `service/automation/`, `service/mqtt/observer/`
+**Location:**
+- Backend tests live under `backend/api/src/test/java/com/yoloFarm/api/`, with some package-specific tests under `backend/api/src/test/java/com/yoloFarm/api/service/automation/` and `backend/api/src/test/java/com/yoloFarm/api/service/mqtt/observer/`.
+- Backend test configuration lives in `backend/api/src/test/resources/application.yml`.
+- Frontend tests are colocated under `__tests__` folders beside source areas: `frontend/src/stores/__tests__/authStore.test.ts`, `frontend/src/pages/__tests__/FarmDetailPage.test.tsx`.
+- Frontend shared setup lives in `frontend/src/setupTests.ts`.
+- Manual simulator verification lives in `simulator/digital-twin/tools/e2e_create_device_and_verify.py`.
 
----
+**Naming:**
+- Backend test classes end with `Test`: `FarmCrudIntegrationTest`, `ApiEndpointContractTest`, `MqttReceiverServiceTest`.
+- Frontend test files end with `.test.ts` or `.test.tsx`.
+- Backend test methods should use behavior names (`should...when...`) for unit tests and contract names (`...ShouldReturn...`) for endpoint tests.
 
-## Test Classes
+**Structure:**
+```text
+backend/api/src/test/
+├── java/com/yoloFarm/api/
+│   ├── *Test.java
+│   └── service/*/*Test.java
+└── resources/application.yml
 
-| Test Class | Type | Focus |
-|---|---|---|
-| `ApiContractSerializationTest` | `@SpringBootTest` | JSON SNAKE_CASE serialization contract |
-| `ApiEndpointContractTest` | Integration | HTTP endpoint response contracts |
-| `AutoIrrigationSafetyServiceTest` | Unit | Safety watchdog auto-off logic |
-| `DeviceServiceRemovalApprovalTest` | Unit/Integration | Device removal + approval lifecycle |
-| `DeviceServiceRenameSyncTest` | Unit | Device rename propagates to Adafruit API |
-| `EntityMappingIntegrationTest` | Integration | JPA entity relationships, DB round-trip |
-| `FarmCrudIntegrationTest` | Integration | Farm CRUD operations with H2 |
-| `MqttReceiverServiceTest` | Unit | MQTT message parsing, feed key resolution, cache behavior |
-| `NotificationServiceRealtimePushTest` | Unit | WebSocket notification push verification |
-| `RuleEngineObserverTest` | Unit | Rule condition evaluation and cooldown |
-| `RuleServiceConditionPairingTest` | Unit | Rule creation with sensor↔actuator pairing |
-| `RuleServiceDeleteLifecycleTest` | Unit | Rule deletion cleans up associations |
-| `RuleServiceSchedulePairingTest` | Unit | CRON rule pairing and scheduling |
-| `TelemetryObserversTest` | Unit | Observer chain invocation |
+frontend/src/
+├── pages/__tests__/*.test.tsx
+├── stores/__tests__/*.test.ts
+└── setupTests.ts
+```
 
----
+## Test Structure
 
-## Testing Patterns
+**Suite Organization:**
+```typescript
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-**Integration Tests (`@SpringBootTest`):**
+vi.mock('@/lib/axios', () => ({
+  default: {
+    get: vi.fn(),
+    put: vi.fn(),
+  },
+}));
+
+describe('notificationStore', () => {
+  const initialStoreState = useNotificationStore.getState();
+
+  beforeEach(() => {
+    useNotificationStore.setState(initialStoreState, true);
+    vi.clearAllMocks();
+  });
+
+  it('should fetch unread count', async () => {
+    vi.mocked(api.get).mockResolvedValueOnce({ data: { unread_count: 5 } });
+    await useNotificationStore.getState().fetchUnreadCount();
+    expect(api.get).toHaveBeenCalledWith('/notifications/unread-count');
+  });
+});
+```
+
+**Patterns:**
+- Backend pure unit tests use `@ExtendWith(MockitoExtension.class)`, `@Mock`, `@InjectMocks`, and explicit fixture builders. See `backend/api/src/test/java/com/yoloFarm/api/RuleServiceConditionPairingTest.java`.
+- Backend Spring MVC contract tests use `@WebMvcTest`, `@AutoConfigureMockMvc`, `MockMvc`, `@MockitoBean`, `.with(authentication(...))`, and `.with(csrf())`. See `backend/api/src/test/java/com/yoloFarm/api/ApiEndpointContractTest.java`.
+- Backend integration tests use `@SpringBootTest`, H2 config from `backend/api/src/test/resources/application.yml`, and `@Transactional` rollback. See `backend/api/src/test/java/com/yoloFarm/api/FarmCrudIntegrationTest.java`.
+- Frontend store tests reset Zustand state with `useStore.setState(initialStoreState, true)` before each test. See `frontend/src/stores/__tests__/authStore.test.ts`.
+- Frontend component tests render with the required router/providers inline. `frontend/src/pages/__tests__/FarmDetailPage.test.tsx` wraps `FarmDetailPage` in `MemoryRouter`, `Routes`, and `Route`.
+
+## Mocking
+
+**Framework:** Mockito for Java, Vitest `vi` for frontend.
+
+**Patterns:**
 ```java
-@SpringBootTest
-class ApiContractSerializationTest {
-    @MockitoBean
-    private IMqttClient mqttClient;  // Mocked to prevent real MQTT connection
+@ExtendWith(MockitoExtension.class)
+class RuleServiceConditionPairingTest {
+    @Mock
+    private RuleRepository ruleRepository;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @InjectMocks
+    private RuleService ruleService;
 
     @Test
-    void loginResponseShouldSerializeSnakeCase() throws Exception {
-        // Build DTO → serialize → assert JSON keys
+    void shouldThrowWhenActivatingConditionRule_withoutOppositeRule() {
+        when(ruleRepository.findByIdAndFarmOwnerId(existing.getId(), ownerId))
+                .thenReturn(Optional.of(existing));
+
+        assertThrows(IllegalStateException.class,
+                () -> ruleService.toggleRule(existing.getId(), true, ownerId));
+        verify(ruleRepository, never()).save(any(Rule.class));
     }
 }
 ```
 
-**Unit Tests with Mockito:**
-- `@MockitoBean` for Spring context mocks
-- `Clock` injection for deterministic time-based tests
+```typescript
+vi.mock('@/lib/axios', () => ({
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+  },
+  getApiErrorMessage: vi.fn((err) => err?.message || 'Error'),
+}));
 
-**H2 Integration:**
-- H2 used via Spring Boot test auto-configuration
+vi.mocked(api.get).mockImplementation((url: string) => {
+  if (url.includes('/devices')) return Promise.resolve({ data: mockDevices });
+  return Promise.resolve({ data: mockFarm });
+});
+```
 
----
+**What to Mock:**
+- Mock external transports and infrastructure: MQTT client `IMqttClient` in `backend/api/src/test/java/com/yoloFarm/api/FarmCrudIntegrationTest.java`, axios in frontend tests, STOMP/WebSocket helpers in `frontend/src/pages/__tests__/FarmDetailPage.test.tsx`, Recharts components under jsdom.
+- Mock repositories in service unit tests to keep domain branching deterministic.
+- Mock Spring beans with `@MockitoBean` in slice/context tests when startup would otherwise create external clients.
 
-## What Is Tested
-- JSON serialization SNAKE_CASE contract
-- Rule engine condition evaluation logic
-- Automation cooldown and safety watchdog
-- Device lifecycle (register → approve → rename → remove)
-- MQTT feed key cache (hit/miss/eviction)
-- Observer notification chain
-- Farm CRUD with ownership scoping
-- Scheduled rule triggering
+**What NOT to Mock:**
+- Do not mock the service under test in unit tests; construct it with mocked collaborators using `@InjectMocks` or direct constructors.
+- Do not mock Jackson serialization for contract tests; `backend/api/src/test/java/com/yoloFarm/api/ApiContractSerializationTest.java` verifies real configured JSON behavior.
+- Do not mock Zustand stores when testing store behavior; call `useAuthStore.getState()` and reset store state directly.
 
----
+## Fixtures and Factories
 
-## What Is NOT Tested (Backend Gaps)
-- AI analysis service (still a stub)
-- WebSocket integration end-to-end
-- Adafruit REST API client (would require network mock)
-- JWT filter integration coverage is limited
+**Test Data:**
+```java
+private Farm buildFarm() {
+    User owner = User.builder()
+            .id(ownerId)
+            .username("owner")
+            .password("pwd")
+            .email("owner@yolo.test")
+            .role(RoleEnum.FARMER)
+            .build();
 
----
+    Farm farm = new Farm();
+    farm.setId(farmId);
+    farm.setOwner(owner);
+    return farm;
+}
+```
 
-## Running Tests
+```typescript
+const mockDevices = [
+  { id: 'dev-1', name: 'Sensor A', model_id: 'model-1', status: 'ACTIVE', device_type: 'SENSOR' },
+  { id: 'dev-2', name: 'Pump A', model_id: 'model-2', status: 'ACTIVE', device_type: 'ACTUATOR', operating_mode: 'MANUAL', connection_status: 'ONLINE' },
+];
+```
 
-```powershell
-# From backend/api/
-./mvnw test
+**Location:**
+- Backend fixtures are private helper methods inside each test class, not shared factories. Examples: `buildFarm`, `buildSensorDevice`, and `buildConditionRuleWithShape` in `backend/api/src/test/java/com/yoloFarm/api/RuleServiceConditionPairingTest.java`.
+- Frontend fixtures are file-local constants such as `mockFarm`, `mockModels`, and `mockDevices` in `frontend/src/pages/__tests__/FarmDetailPage.test.tsx`.
+- No shared fixture directory is detected.
 
-# Run specific test class
-./mvnw test -Dtest=RuleEngineObserverTest
+## Coverage
 
-# Skip tests during build
-./mvnw package -DskipTests
+**Requirements:** None enforced. No JaCoCo Maven plugin is configured in `backend/api/pom.xml`, and no Vitest coverage provider/config is configured in `frontend/vite.config.ts`.
+
+**View Coverage:**
+```bash
+cd frontend && npx vitest --coverage       # Requires adding/configuring a Vitest coverage provider if missing
+cd backend/api && .\mvnw.cmd test          # Runs tests only; no coverage report configured
+```
+
+## Test Types
+
+**Unit Tests:**
+- Backend service/domain unit tests use Mockito and isolated collaborators: `backend/api/src/test/java/com/yoloFarm/api/RuleServiceConditionPairingTest.java`, `backend/api/src/test/java/com/yoloFarm/api/DeviceServiceRenameSyncTest.java`, `backend/api/src/test/java/com/yoloFarm/api/MqttReceiverServiceTest.java`.
+- Frontend store unit tests exercise Zustand state transitions and API calls: `frontend/src/stores/__tests__/authStore.test.ts`, `frontend/src/stores/__tests__/notificationStore.test.ts`.
+
+**Integration Tests:**
+- Backend persistence/service integration uses `@SpringBootTest`, H2, and transaction rollback: `backend/api/src/test/java/com/yoloFarm/api/FarmCrudIntegrationTest.java`, `backend/api/src/test/java/com/yoloFarm/api/EntityMappingIntegrationTest.java`.
+- Backend endpoint contracts use Spring MVC slices and MockMvc: `backend/api/src/test/java/com/yoloFarm/api/ApiEndpointContractTest.java`.
+- Frontend integration-style component tests render routed pages and mock network/chart/WebSocket boundaries: `frontend/src/pages/__tests__/FarmDetailPage.test.tsx`.
+
+**E2E Tests:**
+- No Playwright/Cypress browser E2E suite is detected.
+- Simulator/backend E2E verification is a manual script in `simulator/digital-twin/tools/e2e_create_device_and_verify.py`; it registers users, promotes an admin in the database, creates farm/model/device records through HTTP, waits for telemetry, and verifies the telemetry API.
+
+## Common Patterns
+
+**Async Testing:**
+```typescript
+await waitFor(() => {
+  expect(screen.getAllByText('Farm Test')[0]).toBeInTheDocument();
+});
+
+fireEvent.click(screen.getByRole('button', { name: /Bat/i }));
+
+await waitFor(() => {
+  expect(api.post).toHaveBeenCalledWith('/devices/dev-2/command', { command: 'ON' });
+});
+```
+
+```java
+MqttMessage mqttMsg = new MqttMessage("37.5".getBytes());
+mqttReceiverService.messageArrived("testuser/feeds/temp-feed", mqttMsg);
+
+verify(mockObserver, timeout(2000).times(1)).update(any(SensorData.class));
+```
+
+**Error Testing:**
+```java
+assertThrows(IllegalStateException.class,
+        () -> ruleService.toggleRule(existing.getId(), true, ownerId));
+verify(ruleRepository, never()).save(any(Rule.class));
+```
+
+```typescript
+vi.mocked(api.get).mockRejectedValueOnce(new Error('Unauthorized'));
+
+await useAuthStore.getState().fetchProfile();
+
+expect(useAuthStore.getState().accessToken).toBeNull();
+expect(useAuthStore.getState().isAuthenticated).toBe(false);
 ```
 
 ---
 
-## Test Infrastructure Notes
-
-1. **MQTT client must be mocked** in `@SpringBootTest` to avoid real Adafruit IO connections
-2. **Clock bean** is injectable for deterministic time tests
-3. **H2 vs PostgreSQL** differences can hide schema issues (use caution)
+*Testing analysis: 2026-05-18*

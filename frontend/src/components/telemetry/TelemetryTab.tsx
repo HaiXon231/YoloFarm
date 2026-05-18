@@ -20,7 +20,7 @@ export default function TelemetryTab({ devices }: TelemetryTabProps) {
     return d.toISOString().slice(0, 16)
   })
   const [endTime, setEndTime] = useState(() => new Date().toISOString().slice(0, 16))
-  const [aggregate, setAggregate] = useState<AggregateInterval>('1h')
+  const [aggregate, setAggregate] = useState<AggregateInterval>('')
   const [data, setData] = useState<TelemetryDataPoint[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [hasQueried, setHasQueried] = useState(false)
@@ -42,7 +42,7 @@ export default function TelemetryTab({ devices }: TelemetryTabProps) {
         params: {
           start_time: formatDate(startTime),
           end_time: formatDate(endTime),
-          aggregate,
+          ...(aggregate ? { aggregate } : {}),
         },
       })
       setData(res.data)

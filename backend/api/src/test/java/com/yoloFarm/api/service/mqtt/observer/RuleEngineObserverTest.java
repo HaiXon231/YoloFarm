@@ -117,27 +117,40 @@ class RuleEngineObserverTest {
     }
 
     @Test
-    void update_WhenInCooldown_ShouldDoNothing() {
+    void update_WhenInCooldown_ShouldSkipCommandAndNotifyOnce() {
         UUID triggerDeviceId = UUID.randomUUID();
         SensorData data = new SensorData(UUID.randomUUID(), triggerDeviceId, "TEMP", 45.0f, now);
 
+        UUID ownerId = UUID.randomUUID();
+        User owner = new User();
+        owner.setId(ownerId);
+
+        Farm farm = new Farm();
+        farm.setOwner(owner);
+
         Device actionDevice = new Device();
+        actionDevice.setName("Pump 1");
         actionDevice.setIsActive(false);
 
         UUID ruleId = UUID.randomUUID();
         Rule rule = new Rule();
         rule.setId(ruleId);
+        rule.setRuleName("Hot pump guard");
         rule.setOperator(">");
         rule.setThresholdValue(40.0f);
         rule.setActionCommand(ActionCommandEnum.ON);
         rule.setActionDevice(actionDevice);
+        rule.setFarm(farm);
 
         when(ruleRepository.findActiveRulesWithAssociations(triggerDeviceId)).thenReturn(List.of(rule));
         when(automationRuntimeStateService.isRuleCommandInCooldown(eq(ruleId), eq("ON"), eq(30L), eq(now)))
+                .thenReturn(true);
+        when(automationRuntimeStateService.shouldNotifyRuleCooldown(eq(ruleId), eq("ON"), eq(30L), eq(now)))
                 .thenReturn(true);
 
         ruleEngineObserver.update(data);
 
         verify(irrigationContext, never()).executeControl(any(), any(), any(), any());
+        verify(notificationService).createSystemNotification(eq(ownerId), contains("still in 30-second cooldown"));
     }
 }

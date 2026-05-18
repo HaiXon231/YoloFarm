@@ -5,7 +5,7 @@ import type { RuleResponse } from '@/types'
 
 interface RuleToggleSwitchProps {
   rule: RuleResponse
-  onUpdate: () => void
+  onUpdate: () => void | Promise<void>
   disabled?: boolean
   disabledReason?: string | null
 }
@@ -27,7 +27,7 @@ export default function RuleToggleSwitch({ rule, onUpdate, disabled = false, dis
     setIsLoading(true)
     try {
       await api.patch(`/rules/${rule.id}/toggle`, { is_active: !prev })
-      onUpdate()
+      await onUpdate()
     } catch (error) {
       // Revert on failure
       setIsActive(prev)

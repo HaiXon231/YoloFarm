@@ -16,6 +16,7 @@ import com.yoloFarm.api.repository.DeviceRepository;
 import com.yoloFarm.api.repository.FarmRepository;
 import com.yoloFarm.api.repository.RuleRepository;
 import com.yoloFarm.api.service.RuleService;
+import com.yoloFarm.api.service.automation.AutomationRuntimeStateService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,6 +48,9 @@ class RuleServiceConditionPairingTest {
 
     @Mock
     private DeviceRepository deviceRepository;
+
+    @Mock
+    private AutomationRuntimeStateService automationRuntimeStateService;
 
     @InjectMocks
     private RuleService ruleService;
@@ -175,13 +179,12 @@ class RuleServiceConditionPairingTest {
                 true);
 
         when(ruleRepository.findByIdAndFarmOwnerId(existing.getId(), ownerId)).thenReturn(Optional.of(existing));
-        when(ruleRepository.findByFarmIdAndActionDeviceIdAndTriggerDeviceIdAndRuleTypeAndActionCommand(
+        when(ruleRepository.findByFarmIdAndActionDeviceIdAndTriggerDeviceIdAndRuleType(
                 eq(farmId),
                 eq(actionDeviceId),
                 eq(triggerDeviceId),
-                eq(RuleTypeEnum.CONDITION),
-                eq(ActionCommandEnum.OFF)))
-                .thenReturn(List.of(opposite));
+                eq(RuleTypeEnum.CONDITION)))
+                .thenReturn(List.of(existing, opposite));
         when(ruleRepository.save(any(Rule.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         RuleResponse response = ruleService.toggleRule(existing.getId(), false, ownerId);

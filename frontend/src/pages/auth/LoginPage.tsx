@@ -25,7 +25,7 @@ export default function LoginPage() {
       await fetchProfile()
 
       if (role === 'ADMIN') {
-        navigate('/admin/device-requests', { replace: true })
+        navigate('/admin/dashboard', { replace: true })
       } else {
         navigate('/farms', { replace: true })
       }

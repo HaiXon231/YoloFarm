@@ -33,17 +33,32 @@ public interface RuleRepository extends JpaRepository<Rule, UUID> {
                         com.yoloFarm.api.enums.RuleTypeEnum ruleType,
                         com.yoloFarm.api.enums.ActionCommandEnum actionCommand);
 
+        List<Rule> findByFarmIdAndActionDeviceIdAndTriggerDeviceIdAndRuleType(
+                        UUID farmId,
+                        UUID actionDeviceId,
+                        UUID triggerDeviceId,
+                        com.yoloFarm.api.enums.RuleTypeEnum ruleType);
+
         List<Rule> findByFarmIdAndActionDeviceIdAndRuleTypeAndActionCommand(
                         UUID farmId,
                         UUID actionDeviceId,
                         com.yoloFarm.api.enums.RuleTypeEnum ruleType,
                         com.yoloFarm.api.enums.ActionCommandEnum actionCommand);
 
+        List<Rule> findByFarmIdAndActionDeviceIdAndRuleType(
+                        UUID farmId,
+                        UUID actionDeviceId,
+                        com.yoloFarm.api.enums.RuleTypeEnum ruleType);
+
         /**
          * Lấy active rules kèm Farm + ActionDevice (JOIN FETCH) để tránh N+1 queries
          * Dùng cho RuleEngineObserver
          */
-        @Query("SELECT r FROM Rule r JOIN FETCH r.farm JOIN FETCH r.actionDevice WHERE r.triggerDevice.id = :deviceId AND r.isActive = true")
+        @Query("SELECT r FROM Rule r " +
+                        "JOIN FETCH r.farm f " +
+                        "JOIN FETCH f.owner " +
+                        "JOIN FETCH r.actionDevice " +
+                        "WHERE r.triggerDevice.id = :deviceId AND r.isActive = true")
         List<Rule> findActiveRulesWithAssociations(@Param("deviceId") UUID deviceId);
 
         /**

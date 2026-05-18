@@ -11,6 +11,7 @@ public class AutomationRuntimeStateService {
 
     private final ConcurrentHashMap<UUID, Instant> autoOnSinceByDevice = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Instant> lastRuleCommandByKey = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Instant> lastRuleCooldownNotificationByKey = new ConcurrentHashMap<>();
 
     public boolean isRuleCommandInCooldown(UUID ruleId, String command, long cooldownSeconds, Instant now) {
         if (ruleId == null || command == null || cooldownSeconds <= 0) {
@@ -30,6 +31,21 @@ public class AutomationRuntimeStateService {
             return;
         }
         lastRuleCommandByKey.put(buildRuleCommandKey(ruleId, command), now);
+    }
+
+    public boolean shouldNotifyRuleCooldown(UUID ruleId, String command, long cooldownSeconds, Instant now) {
+        if (ruleId == null || command == null || cooldownSeconds <= 0) {
+            return true;
+        }
+
+        String key = buildRuleCommandKey(ruleId, command);
+        Instant previous = lastRuleCooldownNotificationByKey.get(key);
+        if (previous != null && previous.plusSeconds(cooldownSeconds).isAfter(now)) {
+            return false;
+        }
+
+        lastRuleCooldownNotificationByKey.put(key, now);
+        return true;
     }
 
     public Instant getAutoOnSince(UUID deviceId) {
@@ -79,5 +95,7 @@ public class AutomationRuntimeStateService {
         }
         lastRuleCommandByKey.remove(buildRuleCommandKey(ruleId, "ON"));
         lastRuleCommandByKey.remove(buildRuleCommandKey(ruleId, "OFF"));
+        lastRuleCooldownNotificationByKey.remove(buildRuleCommandKey(ruleId, "ON"));
+        lastRuleCooldownNotificationByKey.remove(buildRuleCommandKey(ruleId, "OFF"));
     }
 }
