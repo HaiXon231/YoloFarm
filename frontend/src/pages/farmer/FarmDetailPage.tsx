@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api, { getApiErrorMessage } from '@/lib/axios'
 import type { FarmResponse, DeviceResponse, DeviceModelResponse, DeviceWithModel } from '@/types'
+import type { DeviceStatusEvent } from '@/lib/websocket'
+import type { ConnectionStatus, DeviceStatus, OperatingMode } from '@/types'
 import OverviewTab from '@/components/devices/OverviewTab'
 import TelemetryTab from '@/components/telemetry/TelemetryTab'
 import RulesTab from '@/components/rules/RulesTab'
@@ -43,6 +45,7 @@ export default function FarmDetailPage() {
           device_type: model?.device_type,
           metric_type: model?.metric_type,
           model_name: model?.model_name,
+          display_unit: model?.display_unit,
         }
       })
       setDevices(enriched)
@@ -57,6 +60,37 @@ export default function FarmDetailPage() {
   useEffect(() => { 
     fetchData() 
   }, [farmId])
+
+  const handleDeviceEvents = (events: DeviceStatusEvent[]) => {
+    setDevices((prev) => {
+      let next = prev
+      events.forEach((event) => {
+        if (event.status === 'REMOVED') {
+          next = next.filter((device) => device.id !== event.deviceId)
+          return
+        }
+
+        next = next.map((device) => {
+          if (device.id !== event.deviceId) {
+            return device
+          }
+
+          const connectionStatus = event.connectionStatus as ConnectionStatus | undefined
+          const operatingMode = event.operatingMode as OperatingMode | undefined
+          const status = event.status as DeviceStatus | undefined
+
+          return {
+            ...device,
+            connection_status: connectionStatus || device.connection_status,
+            operating_mode: operatingMode || device.operating_mode,
+            status: status || device.status,
+            is_active: typeof event.isActive === 'boolean' ? event.isActive : device.is_active,
+          }
+        })
+      })
+      return next
+    })
+  }
 
   if (isLoading) return <LoadingSpinner size="lg" text="Đang tải chi tiết nông trại..." />
   if (!farm || !farmId) return null
@@ -110,6 +144,7 @@ export default function FarmDetailPage() {
           devices={devices}
           deviceModels={deviceModels}
           onDevicesChange={fetchData}
+          onDeviceEvents={handleDeviceEvents}
         />
       )}
       {activeTab === 'telemetry' && (

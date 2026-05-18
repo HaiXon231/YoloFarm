@@ -5,6 +5,7 @@ import com.yoloFarm.api.enums.DeviceStatusEnum;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.yoloFarm.api.dto.request.ApproveDeviceRequest;
+import com.yoloFarm.api.dto.request.AutomationConfigRequest;
 import com.yoloFarm.api.dto.request.DeviceModelRequest;
 import com.yoloFarm.api.service.AdminService;
 import jakarta.validation.Valid;
@@ -54,6 +55,16 @@ public class AdminController {
     public ResponseEntity<?> deleteDevice(@PathVariable("deviceId") UUID deviceId) {
         adminService.deleteDevice(deviceId);
         return ResponseEntity.ok(Map.of("message", "Đã xóa thiết bị khỏi hệ thống"));
+    }
+
+    @GetMapping("/automation-config")
+    public ResponseEntity<?> getAutomationConfig() {
+        return ResponseEntity.ok(adminService.getAutomationConfig());
+    }
+
+    @PatchMapping("/automation-config")
+    public ResponseEntity<?> updateAutomationConfig(@RequestBody AutomationConfigRequest request) {
+        return ResponseEntity.ok(adminService.updateAutomationConfig(request));
     }
 
     @GetMapping("/devices/requests")

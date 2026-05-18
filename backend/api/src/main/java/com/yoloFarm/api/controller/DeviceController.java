@@ -8,8 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.yoloFarm.api.dto.request.DeviceRequest;
 import com.yoloFarm.api.entity.User;
+import com.yoloFarm.api.service.AutomationConfigService;
 import com.yoloFarm.api.service.DeviceService;
 import com.yoloFarm.api.service.TelemetryService;
+import com.yoloFarm.api.service.automation.AutomationRuntimeStateService;
 import com.yoloFarm.api.service.strategy.IrrigationContext;
 import com.yoloFarm.api.service.strategy.ManualStrategy;
 import jakarta.validation.Valid;
@@ -17,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.format.annotation.DateTimeFormat;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.Map;
@@ -29,6 +33,9 @@ public class DeviceController {
     private final TelemetryService telemetryService;
     private final IrrigationContext irrigationContext;
     private final ManualStrategy manualStrategy;
+    private final AutomationRuntimeStateService automationRuntimeStateService;
+    private final AutomationConfigService automationConfigService;
+    private final Clock clock;
 
     @PatchMapping("/{deviceId}")
     public ResponseEntity<?> updateDeviceName(
@@ -81,6 +88,13 @@ public class DeviceController {
             @Valid @RequestBody DeviceCommandRequest request) {
         deviceService.assertDeviceOwnership(currentUser.getId(), deviceId);
         String command = request.getCommand().name();
+        Integer cooldownSeconds = automationConfigService.getCommandCooldownSeconds();
+        Instant now = clock.instant();
+        if (cooldownSeconds != null && cooldownSeconds > 0
+                && automationRuntimeStateService.isRuleCommandInCooldown(deviceId, command, cooldownSeconds, now)) {
+            throw new IllegalStateException(
+                    "Lệnh [" + command + "] đang trong cooldown " + cooldownSeconds + " giây. Vui lòng thử lại sau.");
+        }
         // BUG-09: Dùng farmId từ DeviceService thay vì truyền null
         UUID farmId = deviceService.getFarmIdByDevice(currentUser.getId(), deviceId);
         // BUG-01: Check return value — false nghĩa là lệnh không được gửi (vd: device ở chế độ sai)
@@ -89,6 +103,7 @@ public class DeviceController {
             throw new IllegalStateException(
                     "Lệnh [" + command + "] không thể thực thi. Vui lòng kiểm tra chế độ hoạt động của thiết bị.");
         }
+        automationRuntimeStateService.markRuleCommandExecuted(deviceId, command, now);
         return ResponseEntity.ok(Map.of("message", "Lệnh [" + command + "] đã được gửi tới thiết bị thành công."));
     }
 

@@ -15,4 +15,8 @@ public class DeviceRequest {
 
     @NotBlank(message = "Device name cannot be empty")
     private String name;
+
+    private Float minValue;
+
+    private Float maxValue;
 }

@@ -3,13 +3,13 @@ package com.yoloFarm.api.service.mqtt.observer;
 import com.yoloFarm.api.dto.SensorData;
 import com.yoloFarm.api.entity.Rule;
 import com.yoloFarm.api.repository.RuleRepository;
+import com.yoloFarm.api.service.AutomationConfigService;
 import com.yoloFarm.api.service.automation.AutomationRuntimeStateService;
 import com.yoloFarm.api.service.NotificationService;
 import com.yoloFarm.api.service.strategy.AutoThresholdStrategy;
 import com.yoloFarm.api.service.strategy.IrrigationContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
@@ -26,10 +26,8 @@ public class RuleEngineObserver implements Observer {
     private final AutoThresholdStrategy autoThresholdStrategy;
     private final NotificationService notificationService;
     private final AutomationRuntimeStateService automationRuntimeStateService;
+    private final AutomationConfigService automationConfigService;
     private final Clock clock;
-
-    @Value("${app.automation.rule-command-cooldown-seconds:30}")
-    private long ruleCommandCooldownSeconds;
 
     @Override
     public void update(SensorData data) {
@@ -47,22 +45,23 @@ public class RuleEngineObserver implements Observer {
             }
 
             String command = rule.getActionCommand().name();
+            long cooldownSeconds = automationConfigService.getCommandCooldownSeconds();
             if (shouldSkipAsAlreadyInDesiredState(rule, command)) {
                 continue;
             }
 
             Instant now = clock.instant();
             if (automationRuntimeStateService.isRuleCommandInCooldown(
-                    rule.getId(), command, ruleCommandCooldownSeconds, now)) {
+                    rule.getId(), command, cooldownSeconds, now)) {
                 log.debug("Rule {} is in cooldown for command {}", rule.getId(), command);
                 if (automationRuntimeStateService.shouldNotifyRuleCooldown(
-                        rule.getId(), command, ruleCommandCooldownSeconds, now)) {
+                        rule.getId(), command, cooldownSeconds, now)) {
                     String msg = String.format(
                             "Auto system: skipped repeated %s command for [%s] because rule [%s] is still in %d-second cooldown.",
                             command,
                             rule.getActionDevice().getName(),
                             rule.getRuleName(),
-                            ruleCommandCooldownSeconds);
+                            cooldownSeconds);
                     notificationService.createSystemNotification(rule.getFarm().getOwner().getId(), msg);
                 }
                 continue;

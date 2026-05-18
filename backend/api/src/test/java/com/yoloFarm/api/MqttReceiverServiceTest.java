@@ -7,6 +7,9 @@ import com.yoloFarm.api.entity.Farm;
 import com.yoloFarm.api.enums.DeviceTypeEnum;
 import com.yoloFarm.api.enums.MetricTypeEnum;
 import com.yoloFarm.api.repository.DeviceRepository;
+import com.yoloFarm.api.service.DeviceRealtimeService;
+import com.yoloFarm.api.service.NotificationService;
+import com.yoloFarm.api.service.automation.AutomationRuntimeStateService;
 import com.yoloFarm.api.service.mqtt.MqttReceiverService;
 import com.yoloFarm.api.service.mqtt.observer.Observer;
 import org.eclipse.paho.client.mqttv3.IMqttClient;
@@ -14,7 +17,6 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.util.List;
 import java.util.Optional;
@@ -31,19 +33,23 @@ class MqttReceiverServiceTest {
     private MqttReceiverService mqttReceiverService;
     private Observer mockObserver;
     private DeviceRepository mockDeviceRepo;
+    private NotificationService mockNotificationService;
+    private AutomationRuntimeStateService mockAutomationRuntimeStateService;
+    private DeviceRealtimeService mockDeviceRealtimeService;
     private IMqttClient mockMqttClient;
-    private SimpMessagingTemplate mockMessagingTemplate;
 
     @BeforeEach
     public void setUp() {
         mockObserver = Mockito.mock(Observer.class);
         mockDeviceRepo = Mockito.mock(DeviceRepository.class);
+        mockNotificationService = Mockito.mock(NotificationService.class);
+        mockAutomationRuntimeStateService = Mockito.mock(AutomationRuntimeStateService.class);
+        mockDeviceRealtimeService = Mockito.mock(DeviceRealtimeService.class);
         mockMqttClient = Mockito.mock(IMqttClient.class);
-        mockMessagingTemplate = Mockito.mock(SimpMessagingTemplate.class);
         mockJdbcTemplate = Mockito.mock(org.springframework.jdbc.core.JdbcTemplate.class);
 
         mqttReceiverService = new MqttReceiverService(List.of(mockObserver), mockMqttClient, mockDeviceRepo,
-                mockMessagingTemplate, mockJdbcTemplate);
+                mockNotificationService, mockAutomationRuntimeStateService, mockDeviceRealtimeService, mockJdbcTemplate);
         mqttReceiverService.init();
     }
 

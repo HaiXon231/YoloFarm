@@ -3,6 +3,7 @@ package com.yoloFarm.api.service.strategy;
 import com.yoloFarm.api.entity.Device;
 import com.yoloFarm.api.enums.OperatingModeEnum;
 import com.yoloFarm.api.repository.DeviceRepository;
+import com.yoloFarm.api.service.DeviceRealtimeService;
 import com.yoloFarm.api.service.mqtt.MqttSenderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ public class AutoThresholdStrategy implements IrrigationStrategy {
 
     private final DeviceRepository deviceRepository;
     private final MqttSenderService mqttSenderService;
+    private final DeviceRealtimeService deviceRealtimeService;
 
     @Override
     public boolean executeControl(UUID farmId, UUID deviceId, String command) {
@@ -40,7 +42,8 @@ public class AutoThresholdStrategy implements IrrigationStrategy {
         // BUG-02: Publish MQTT trước, lưu DB sau khi thành công
         mqttSenderService.sendCommand(adafruitFeedKey, command);
         device.setIsActive("ON".equalsIgnoreCase(command));
-        deviceRepository.save(device);
+        Device saved = deviceRepository.save(device);
+        deviceRealtimeService.publishDeviceState(saved);
 
         log.info("Sent auto command {} (Sensor Based) to device {}", command, deviceId);
         return true;

@@ -85,6 +85,11 @@ export default function DeviceModelsPage() {
                       {model.manufacturer}
                     </p>
                   )}
+                  {(model.min_value != null || model.max_value != null) && (
+                    <p className="text-xs text-on-surface-variant mt-2">
+                      Khuyến nghị: {model.min_value ?? '-'} - {model.max_value ?? '-'} {model.display_unit ?? ''}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

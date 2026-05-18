@@ -47,13 +47,18 @@ export interface FarmResponse {
 // DEVICE MODEL DTOs
 // ============================================
 export type DeviceType = 'SENSOR' | 'ACTUATOR'
-export type MetricType = 'TEMP' | 'HUMIDITY' | 'SOIL_MOISTURE' | 'PUMP' | 'LIGHT'
+export type MetricType = 'TEMP' | 'HUMIDITY' | 'SOIL_MOISTURE' | 'LIGHT' | 'PRESSURE' | 'CO2' | 'PUMP' | 'VALVE' | 'RELAY' | 'FAN'
 
 export interface DeviceModelRequest {
   model_name: string
   device_type: DeviceType
   metric_type: MetricType
   manufacturer?: string
+  display_unit?: string
+  min_value?: number | null
+  max_value?: number | null
+  model_description?: string
+  reference_url?: string
 }
 
 export interface DeviceModelResponse {
@@ -62,6 +67,11 @@ export interface DeviceModelResponse {
   device_type: DeviceType
   metric_type: MetricType
   manufacturer?: string
+  display_unit?: string | null
+  min_value?: number | null
+  max_value?: number | null
+  model_description?: string | null
+  reference_url?: string | null
 }
 
 // ============================================
@@ -90,6 +100,11 @@ export interface DeviceResponse {
   is_active: boolean
   min_value: number | null
   max_value: number | null
+}
+
+export interface AutomationConfigResponse {
+  max_auto_on_minutes: number
+  command_cooldown_seconds: number
 }
 
 export interface AdminStatsResponse {
@@ -125,6 +140,7 @@ export interface AdminDeviceResponse {
   id: string
   name: string
   model_name: string
+  device_type: DeviceType
   status: DeviceStatus
   farm_name: string
   owner_name: string
@@ -137,6 +153,7 @@ export interface DeviceWithModel extends DeviceResponse {
   device_type?: DeviceType
   metric_type?: MetricType
   model_name?: string
+  display_unit?: string | null
 }
 
 // ============================================

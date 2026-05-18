@@ -8,6 +8,8 @@ import com.yoloFarm.api.enums.ActionCommandEnum;
 import com.yoloFarm.api.enums.OperatingModeEnum;
 import com.yoloFarm.api.repository.DeviceRepository;
 import com.yoloFarm.api.repository.RuleRepository;
+import com.yoloFarm.api.service.AutomationConfigService;
+import com.yoloFarm.api.service.DeviceRealtimeService;
 import com.yoloFarm.api.service.automation.AutomationRuntimeStateService;
 import com.yoloFarm.api.service.NotificationService;
 import com.yoloFarm.api.service.mqtt.MqttSenderService;
@@ -44,6 +46,12 @@ class RuleEngineObserverTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private AutomationConfigService automationConfigService;
+
+    @Mock
+    private DeviceRealtimeService deviceRealtimeService;
+
     private AutomationRuntimeStateService automationRuntimeStateService;
 
     private IrrigationContext irrigationContext;
@@ -54,7 +62,7 @@ class RuleEngineObserverTest {
     public void setUp() {
         // 1. Tự tay lắp ráp các hạt nhân Logic (Không cần chạy nguyên cả Server Spring
         // Boot nặng nề)
-        autoThresholdStrategy = new AutoThresholdStrategy(deviceRepository, mqttSenderService);
+        autoThresholdStrategy = new AutoThresholdStrategy(deviceRepository, mqttSenderService, deviceRealtimeService);
         irrigationContext = new IrrigationContext();
         automationRuntimeStateService = new AutomationRuntimeStateService();
         ruleEngineObserver = new RuleEngineObserver(
@@ -63,6 +71,7 @@ class RuleEngineObserverTest {
                 autoThresholdStrategy,
                 notificationService,
                 automationRuntimeStateService,
+                automationConfigService,
                 Clock.systemUTC());
     }
 
@@ -98,6 +107,7 @@ class RuleEngineObserverTest {
         // Hướng dẫn Mockito: Nếu truy vấn Database bằng sensorId -> Trả về mockRule
         when(ruleRepository.findActiveRulesWithAssociations(sensorId))
                 .thenReturn(List.of(mockRule));
+        when(automationConfigService.getCommandCooldownSeconds()).thenReturn(30);
 
         // Hướng dẫn Mockito: Nếu Strategy tìm máy bơm trong Database -> Trả về mockPump
         when(deviceRepository.findById(pumpId))

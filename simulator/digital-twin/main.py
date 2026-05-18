@@ -170,8 +170,18 @@ class DigitalTwinManager:
             val = mid + amp * math.sin((2.0 * math.pi / period_seconds) * t)
             return max(vmin, min(vmax, val + random.uniform(-noise, noise)))
 
+        if pattern == "bounded_random":
+            # Beta distribution keeps most values near the middle of the configured
+            # range, with fewer edge values than uniform random generation.
+            ratio = random.betavariate(3.0, 3.0)
+            val = vmin + (vmax - vmin) * ratio
+            return max(vmin, min(vmax, val + random.uniform(-noise, noise)))
+
         delta = random.uniform(-step, step)
         val = runtime.current_value + delta + random.uniform(-noise, noise)
+        if random.random() < 0.08:
+            ratio = random.betavariate(3.0, 3.0)
+            val = vmin + (vmax - vmin) * ratio
         return max(vmin, min(vmax, val))
 
     def _device_loop(self, runtime: DeviceRuntime):

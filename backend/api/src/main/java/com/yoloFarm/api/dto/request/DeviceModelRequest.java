@@ -18,4 +18,14 @@ public class DeviceModelRequest {
     private MetricTypeEnum metricType;
 
     private String manufacturer;
+
+    private String displayUnit;
+
+    private Float minValue;
+
+    private Float maxValue;
+
+    private String modelDescription;
+
+    private String referenceUrl;
 }

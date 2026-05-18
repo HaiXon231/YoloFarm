@@ -33,6 +33,21 @@ public class DeviceModel {
     @Column(length = 100)
     private String manufacturer;
 
+    @Column(length = 20)
+    private String displayUnit;
+
+    @Column(name = "min_value")
+    private Float minValue;
+
+    @Column(name = "max_value")
+    private Float maxValue;
+
+    @Column(columnDefinition = "TEXT")
+    private String modelDescription;
+
+    @Column(length = 500)
+    private String referenceUrl;
+
     @OneToMany(mappedBy = "model", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<Device> devices;
 }

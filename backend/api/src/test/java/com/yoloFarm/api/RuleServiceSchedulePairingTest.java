@@ -152,12 +152,11 @@ class RuleServiceSchedulePairingTest {
                 "0 18 * * *", true);
 
         when(ruleRepository.findByIdAndFarmOwnerId(existing.getId(), ownerId)).thenReturn(Optional.of(existing));
-        when(ruleRepository.findByFarmIdAndActionDeviceIdAndRuleTypeAndActionCommand(
+        when(ruleRepository.findByFarmIdAndActionDeviceIdAndRuleType(
                 eq(farmId),
                 eq(actionDeviceId),
-                eq(RuleTypeEnum.SCHEDULE),
-                eq(ActionCommandEnum.OFF)))
-                .thenReturn(List.of(opposite));
+                eq(RuleTypeEnum.SCHEDULE)))
+                .thenReturn(List.of(existing, opposite));
         when(ruleRepository.save(any(Rule.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         RuleResponse response = ruleService.toggleRule(existing.getId(), false, ownerId);

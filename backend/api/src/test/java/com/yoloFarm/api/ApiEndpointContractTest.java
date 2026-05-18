@@ -7,10 +7,12 @@ import com.yoloFarm.api.entity.User;
 import com.yoloFarm.api.enums.RoleEnum;
 import com.yoloFarm.api.service.ControlService;
 import com.yoloFarm.api.service.AdminService;
+import com.yoloFarm.api.service.AutomationConfigService;
 import com.yoloFarm.api.service.DeviceModelService;
 import com.yoloFarm.api.service.DeviceService;
 import com.yoloFarm.api.service.RuleService;
 import com.yoloFarm.api.service.TelemetryService;
+import com.yoloFarm.api.service.automation.AutomationRuntimeStateService;
 import com.yoloFarm.api.repository.UserRepository;
 import com.yoloFarm.api.repository.FarmRepository;
 import com.yoloFarm.api.repository.DeviceRepository;
@@ -34,6 +36,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 import java.util.Map;
+import java.time.Clock;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -82,6 +85,15 @@ class ApiEndpointContractTest {
 
         @MockitoBean
         private ManualStrategy manualStrategy;
+
+        @MockitoBean
+        private AutomationRuntimeStateService automationRuntimeStateService;
+
+        @MockitoBean
+        private AutomationConfigService automationConfigService;
+
+        @MockitoBean
+        private Clock clock;
 
         @MockitoBean
         private RuleService ruleService;

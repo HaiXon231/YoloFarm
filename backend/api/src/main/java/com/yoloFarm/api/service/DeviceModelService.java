@@ -27,14 +27,27 @@ public class DeviceModelService {
 
 	@Transactional
 	public DeviceModelResponse createDeviceModel(DeviceModelRequest request) {
+		validateRange(request.getMinValue(), request.getMaxValue());
+
 		DeviceModel model = DeviceModel.builder()
 				.modelName(request.getModelName())
 				.deviceType(request.getDeviceType())
 				.metricType(request.getMetricType())
 				.manufacturer(request.getManufacturer())
+				.displayUnit(request.getDisplayUnit())
+				.minValue(request.getMinValue())
+				.maxValue(request.getMaxValue())
+				.modelDescription(request.getModelDescription())
+				.referenceUrl(request.getReferenceUrl())
 				.build();
 
 		return mapToResponse(deviceModelRepository.save(model));
+	}
+
+	private void validateRange(Float minValue, Float maxValue) {
+		if (minValue != null && maxValue != null && minValue >= maxValue) {
+			throw new IllegalArgumentException("Model min_value phải nhỏ hơn max_value");
+		}
 	}
 
 	private DeviceModelResponse mapToResponse(DeviceModel model) {
@@ -44,6 +57,11 @@ public class DeviceModelService {
 		response.setDeviceType(model.getDeviceType());
 		response.setMetricType(model.getMetricType());
 		response.setManufacturer(model.getManufacturer());
+		response.setDisplayUnit(model.getDisplayUnit());
+		response.setMinValue(model.getMinValue());
+		response.setMaxValue(model.getMaxValue());
+		response.setModelDescription(model.getModelDescription());
+		response.setReferenceUrl(model.getReferenceUrl());
 		return response;
 	}
 }

@@ -7,6 +7,7 @@ import com.yoloFarm.api.entity.Rule;
 import com.yoloFarm.api.entity.User;
 import com.yoloFarm.api.enums.ActionCommandEnum;
 import com.yoloFarm.api.repository.RuleRepository;
+import com.yoloFarm.api.service.AutomationConfigService;
 import com.yoloFarm.api.service.NotificationService;
 import com.yoloFarm.api.service.automation.AutomationRuntimeStateService;
 import com.yoloFarm.api.service.strategy.AutoThresholdStrategy;
@@ -42,6 +43,8 @@ class RuleEngineObserverTest {
     private NotificationService notificationService;
     @Mock
     private AutomationRuntimeStateService automationRuntimeStateService;
+    @Mock
+    private AutomationConfigService automationConfigService;
 
     @InjectMocks
     private RuleEngineObserver ruleEngineObserver;
@@ -54,7 +57,6 @@ class RuleEngineObserverTest {
         now = Instant.parse("2026-04-27T10:00:00Z");
         fixedClock = Clock.fixed(now, ZoneId.of("UTC"));
         ReflectionTestUtils.setField(ruleEngineObserver, "clock", fixedClock);
-        ReflectionTestUtils.setField(ruleEngineObserver, "ruleCommandCooldownSeconds", 30L);
     }
 
     @Test
@@ -87,6 +89,7 @@ class RuleEngineObserverTest {
         rule.setFarm(farm);
 
         when(ruleRepository.findActiveRulesWithAssociations(triggerDeviceId)).thenReturn(List.of(rule));
+        when(automationConfigService.getCommandCooldownSeconds()).thenReturn(30);
         when(automationRuntimeStateService.isRuleCommandInCooldown(eq(ruleId), eq("ON"), eq(30L), eq(now)))
                 .thenReturn(false);
         when(irrigationContext.executeControl(autoThresholdStrategy, farmId, actionDeviceId, "ON"))
@@ -143,6 +146,7 @@ class RuleEngineObserverTest {
         rule.setFarm(farm);
 
         when(ruleRepository.findActiveRulesWithAssociations(triggerDeviceId)).thenReturn(List.of(rule));
+        when(automationConfigService.getCommandCooldownSeconds()).thenReturn(30);
         when(automationRuntimeStateService.isRuleCommandInCooldown(eq(ruleId), eq("ON"), eq(30L), eq(now)))
                 .thenReturn(true);
         when(automationRuntimeStateService.shouldNotifyRuleCooldown(eq(ruleId), eq("ON"), eq(30L), eq(now)))

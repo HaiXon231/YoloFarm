@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import toast from 'react-hot-toast'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { format } from 'date-fns'
 import api, { getApiErrorMessage } from '@/lib/axios'
 import type { DeviceWithModel, TelemetryDataPoint, AggregateInterval } from '@/types'
@@ -13,7 +13,7 @@ interface TelemetryTabProps {
 }
 
 export default function TelemetryTab({ devices }: TelemetryTabProps) {
-  const sensors = devices.filter((d) => d.device_type === 'SENSOR' && d.status === 'ACTIVE')
+  const chartDevices = devices.filter((d) => d.status === 'ACTIVE')
   const [selectedDeviceId, setSelectedDeviceId] = useState('')
   const [startTime, setStartTime] = useState(() => {
     const d = new Date(); d.setHours(d.getHours() - 24)
@@ -27,7 +27,7 @@ export default function TelemetryTab({ devices }: TelemetryTabProps) {
 
   const handleQuery = async () => {
     if (!selectedDeviceId) {
-      toast.error('Vui lòng chọn một cảm biến')
+      toast.error('Vui lòng chọn một thiết bị')
       return
     }
     setIsLoading(true)
@@ -55,8 +55,9 @@ export default function TelemetryTab({ devices }: TelemetryTabProps) {
     }
   }
 
-  const selectedDevice = sensors.find((s) => s.id === selectedDeviceId)
-  const metricUnit = selectedDevice?.metric_type === 'TEMP' ? '°C' : '%'
+  const selectedDevice = chartDevices.find((s) => s.id === selectedDeviceId)
+  const isActuator = selectedDevice?.device_type === 'ACTUATOR'
+  const metricUnit = selectedDevice?.display_unit || (selectedDevice?.metric_type === 'TEMP' ? '°C' : selectedDevice?.device_type === 'ACTUATOR' ? '' : '%')
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -72,8 +73,8 @@ export default function TelemetryTab({ devices }: TelemetryTabProps) {
               className="input-field"
               id="telemetry-sensor-select"
             >
-              <option value="">-- Chọn cảm biến --</option>
-              {sensors.map((s) => (
+              <option value="">-- Chọn thiết bị --</option>
+              {chartDevices.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
@@ -124,6 +125,33 @@ export default function TelemetryTab({ devices }: TelemetryTabProps) {
       {/* Chart */}
       {isLoading ? (
         <LoadingSpinner text="Đang tải dữ liệu..." />
+      ) : hasQueried && data.length > 0 && isActuator ? (
+        <div className="card">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-headline text-lg font-bold text-on-surface">
+              {selectedDevice?.name || 'Lịch sử hoạt động'}
+            </h3>
+            <span className="badge-active">{data.length} bản ghi</span>
+          </div>
+          <div className="divide-y divide-surface-container-low">
+            {data.slice().reverse().map((point, index) => {
+              const isOn = point.value > 0.5
+              return (
+                <div key={`${point.time}-${index}`} className="flex items-center justify-between py-3">
+                  <div className="flex items-center gap-3">
+                    <span className={`material-symbols-outlined ${isOn ? 'text-primary' : 'text-on-surface-variant'}`}>
+                      {isOn ? 'toggle_on' : 'toggle_off'}
+                    </span>
+                    <span className="text-sm font-bold text-on-surface">{isOn ? 'ON' : 'OFF'}</span>
+                  </div>
+                  <span className="text-xs text-on-surface-variant">
+                    {format(new Date(point.time), 'dd/MM/yyyy HH:mm:ss')}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       ) : hasQueried && data.length > 0 ? (
         <div className="card">
           <div className="flex items-center justify-between mb-6">
@@ -160,6 +188,12 @@ export default function TelemetryTab({ devices }: TelemetryTabProps) {
                   tickLine={false}
                   unit={metricUnit}
                 />
+                {selectedDevice?.min_value != null && (
+                  <ReferenceLine y={selectedDevice.min_value} stroke="#b45309" strokeDasharray="5 5" label="Min" />
+                )}
+                {selectedDevice?.max_value != null && (
+                  <ReferenceLine y={selectedDevice.max_value} stroke="#b91c1c" strokeDasharray="5 5" label="Max" />
+                )}
                 <Tooltip
                   contentStyle={{
                     backgroundColor: '#fff',

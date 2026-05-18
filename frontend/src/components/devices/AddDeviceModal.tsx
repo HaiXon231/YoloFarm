@@ -15,6 +15,8 @@ interface AddDeviceModalProps {
 export default function AddDeviceModal({ isOpen, onClose, farmId, deviceModels, onSuccess }: AddDeviceModalProps) {
   const [modelId, setModelId] = useState('')
   const [name, setName] = useState('')
+  const [minValue, setMinValue] = useState('')
+  const [maxValue, setMaxValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,10 +27,18 @@ export default function AddDeviceModal({ isOpen, onClose, farmId, deviceModels, 
     }
     setIsLoading(true)
     try {
-      await api.post('/devices/requests', { farm_id: farmId, model_id: modelId, name })
+      await api.post('/devices/requests', {
+        farm_id: farmId,
+        model_id: modelId,
+        name,
+        min_value: minValue === '' ? null : Number(minValue),
+        max_value: maxValue === '' ? null : Number(maxValue),
+      })
       toast.success('Đã gửi yêu cầu thêm thiết bị! Vui lòng chờ Admin duyệt.')
       setModelId('')
       setName('')
+      setMinValue('')
+      setMaxValue('')
       onSuccess()
     } catch (error) {
       toast.error(getApiErrorMessage(error))
@@ -66,6 +76,9 @@ export default function AddDeviceModal({ isOpen, onClose, farmId, deviceModels, 
               <span>•</span>
               <span>{selectedModel.metric_type}</span>
               {selectedModel.manufacturer && <><span>•</span><span>{selectedModel.manufacturer}</span></>}
+              {(selectedModel.min_value != null || selectedModel.max_value != null) && (
+                <><span>•</span><span>Khuyến nghị {selectedModel.min_value ?? '-'} - {selectedModel.max_value ?? '-'} {selectedModel.display_unit ?? ''}</span></>
+              )}
             </div>
           )}
         </div>
@@ -82,6 +95,33 @@ export default function AddDeviceModal({ isOpen, onClose, farmId, deviceModels, 
             required
           />
         </div>
+
+        {selectedModel?.device_type === 'SENSOR' && (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label-text block mb-2">Ngưỡng cảnh báo min</label>
+              <input
+                type="number"
+                step="any"
+                value={minValue}
+                onChange={(e) => setMinValue(e.target.value)}
+                className="input-field"
+                placeholder={selectedModel.min_value?.toString() ?? ''}
+              />
+            </div>
+            <div>
+              <label className="label-text block mb-2">Ngưỡng cảnh báo max</label>
+              <input
+                type="number"
+                step="any"
+                value={maxValue}
+                onChange={(e) => setMaxValue(e.target.value)}
+                className="input-field"
+                placeholder={selectedModel.max_value?.toString() ?? ''}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="bg-surface-container-low rounded-xl p-4 text-xs text-on-surface-variant">
           <p className="flex items-center gap-2">

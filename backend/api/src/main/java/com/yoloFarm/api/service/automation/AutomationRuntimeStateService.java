@@ -12,6 +12,7 @@ public class AutomationRuntimeStateService {
     private final ConcurrentHashMap<UUID, Instant> autoOnSinceByDevice = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Instant> lastRuleCommandByKey = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Instant> lastRuleCooldownNotificationByKey = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Instant> lastThresholdNotificationByKey = new ConcurrentHashMap<>();
 
     public boolean isRuleCommandInCooldown(UUID ruleId, String command, long cooldownSeconds, Instant now) {
         if (ruleId == null || command == null || cooldownSeconds <= 0) {
@@ -45,6 +46,21 @@ public class AutomationRuntimeStateService {
         }
 
         lastRuleCooldownNotificationByKey.put(key, now);
+        return true;
+    }
+
+    public boolean shouldNotifyThresholdBreach(UUID deviceId, String boundary, long cooldownSeconds, Instant now) {
+        if (deviceId == null || boundary == null || cooldownSeconds <= 0) {
+            return true;
+        }
+
+        String key = deviceId + ":" + boundary.toUpperCase();
+        Instant previous = lastThresholdNotificationByKey.get(key);
+        if (previous != null && previous.plusSeconds(cooldownSeconds).isAfter(now)) {
+            return false;
+        }
+
+        lastThresholdNotificationByKey.put(key, now);
         return true;
     }
 
@@ -83,6 +99,8 @@ public class AutomationRuntimeStateService {
             return;
         }
         autoOnSinceByDevice.remove(deviceId);
+        lastThresholdNotificationByKey.remove(deviceId + ":MIN");
+        lastThresholdNotificationByKey.remove(deviceId + ":MAX");
     }
 
     /**

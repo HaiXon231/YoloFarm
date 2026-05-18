@@ -16,6 +16,7 @@ import com.yoloFarm.api.repository.DeviceRepository;
 import com.yoloFarm.api.repository.FarmRepository;
 import com.yoloFarm.api.repository.RuleRepository;
 import com.yoloFarm.api.service.AdafruitApiService;
+import com.yoloFarm.api.service.DeviceRealtimeService;
 import com.yoloFarm.api.service.DeviceService;
 import com.yoloFarm.api.service.NotificationService;
 import com.yoloFarm.api.service.automation.AutomationRuntimeStateService;
@@ -69,6 +70,9 @@ class DeviceServiceRemovalApprovalTest {
 
         @Mock
         private AutomationRuntimeStateService automationRuntimeStateService;
+
+        @Mock
+        private DeviceRealtimeService deviceRealtimeService;
 
         @InjectMocks
         private DeviceService deviceService;

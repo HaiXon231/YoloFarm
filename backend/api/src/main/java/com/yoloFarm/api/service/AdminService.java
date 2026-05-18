@@ -1,5 +1,6 @@
 package com.yoloFarm.api.service;
 
+import com.yoloFarm.api.dto.request.AutomationConfigRequest;
 import com.yoloFarm.api.dto.request.DeviceModelRequest;
 import com.yoloFarm.api.dto.response.*;
 import com.yoloFarm.api.enums.DeviceStatusEnum;
@@ -27,6 +28,7 @@ public class AdminService {
     private final FarmRepository farmRepository;
     private final DeviceRepository deviceRepository;
     private final IMqttClient mqttClient;
+    private final AutomationConfigService automationConfigService;
 
     public AdminStatsResponse getStats() {
         return AdminStatsResponse.builder()
@@ -76,6 +78,7 @@ public class AdminService {
                         .id(p.getId())
                         .name(p.getName())
                         .modelName(p.getModelName())
+                        .deviceType(p.getDeviceType())
                         .status(p.getStatus())
                         .farmName(p.getFarmName())
                         .ownerName(p.getOwnerName())
@@ -93,6 +96,16 @@ public class AdminService {
     @Transactional
     public void deleteDevice(UUID deviceId) {
         deviceService.deleteDevice(deviceId);
+    }
+
+    @Transactional
+    public AutomationConfigResponse getAutomationConfig() {
+        return automationConfigService.getConfig();
+    }
+
+    @Transactional
+    public AutomationConfigResponse updateAutomationConfig(AutomationConfigRequest request) {
+        return automationConfigService.updateConfig(request);
     }
 
     public List<DeviceResponse> getDeviceRequests(String status) {

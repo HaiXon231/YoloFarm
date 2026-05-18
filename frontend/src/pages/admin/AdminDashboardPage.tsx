@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import api, { getApiErrorMessage } from '@/lib/axios'
-import type { AdminStatsResponse } from '@/types'
+import type { AdminStatsResponse, AutomationConfigResponse } from '@/types'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import toast from 'react-hot-toast'
 import AdminDetailDrawer from '@/components/admin/AdminDetailDrawer'
@@ -8,6 +8,10 @@ import { connectAdminStats, disconnectAdminStats } from '@/lib/websocket'
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<AdminStatsResponse | null>(null)
+  const [automationConfig, setAutomationConfig] = useState<AutomationConfigResponse | null>(null)
+  const [maxAutoOnMinutes, setMaxAutoOnMinutes] = useState('20')
+  const [commandCooldownSeconds, setCommandCooldownSeconds] = useState('30')
+  const [isSavingConfig, setIsSavingConfig] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   
   // Drawer state
@@ -25,14 +29,44 @@ export default function AdminDashboardPage() {
     }
   }, [])
 
+  const fetchAutomationConfig = useCallback(async () => {
+    try {
+      const res = await api.get<AutomationConfigResponse>('/admin/automation-config')
+      setAutomationConfig(res.data)
+      setMaxAutoOnMinutes(String(res.data.max_auto_on_minutes))
+      setCommandCooldownSeconds(String(res.data.command_cooldown_seconds))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error))
+    }
+  }, [])
+
+  const saveAutomationConfig = async () => {
+    setIsSavingConfig(true)
+    try {
+      const res = await api.patch<AutomationConfigResponse>('/admin/automation-config', {
+        max_auto_on_minutes: Number(maxAutoOnMinutes),
+        command_cooldown_seconds: Number(commandCooldownSeconds),
+      })
+      setAutomationConfig(res.data)
+      setMaxAutoOnMinutes(String(res.data.max_auto_on_minutes))
+      setCommandCooldownSeconds(String(res.data.command_cooldown_seconds))
+      toast.success('Đã cập nhật cấu hình actuator')
+    } catch (error) {
+      toast.error(getApiErrorMessage(error))
+    } finally {
+      setIsSavingConfig(false)
+    }
+  }
+
   useEffect(() => {
     // Lần đầu load
     fetchStats()
+    fetchAutomationConfig()
     // Kết nối WebSocket: nhận push event từ backend khi có thiết bị online/offline
     // Chỉ gọi fetchStats khi thực sự có thay đổi, không polling thừa
     connectAdminStats(fetchStats)
     return () => disconnectAdminStats()
-  }, [fetchStats])
+  }, [fetchStats, fetchAutomationConfig])
 
   const handleCardClick = (type: 'farmers' | 'farms' | 'devices' | 'active_devices') => {
     setDetailType(type)
@@ -197,6 +231,56 @@ export default function AdminDashboardPage() {
                 <p className={`text-sm font-black ${s.color}`}>{s.status}</p>
               </div>
             ))}
+          </div>
+        </div>
+
+        <div className="premium-card p-10 animate-slide-up" style={{ animationDelay: '0.7s' }}>
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-14 h-14 rounded-3xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <span className="material-symbols-outlined text-3xl icon-filled">tune</span>
+            </div>
+            <div>
+              <h3 className="font-headline text-2xl font-black text-on-surface">Cấu hình actuator</h3>
+              <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Áp dụng chung cho tất cả actuator</p>
+            </div>
+          </div>
+
+          <div className="space-y-5">
+            <label className="block">
+              <span className="text-[11px] font-black text-on-surface-variant uppercase tracking-widest">Giới hạn chạy liên tục (phút)</span>
+              <input
+                type="number"
+                min="1"
+                max="1440"
+                className="input-field mt-2"
+                value={maxAutoOnMinutes}
+                onChange={(e) => setMaxAutoOnMinutes(e.target.value)}
+              />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-black text-on-surface-variant uppercase tracking-widest">Cooldown lệnh (giây)</span>
+              <input
+                type="number"
+                min="0"
+                max="86400"
+                className="input-field mt-2"
+                value={commandCooldownSeconds}
+                onChange={(e) => setCommandCooldownSeconds(e.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={saveAutomationConfig}
+              disabled={isSavingConfig}
+              className="btn-primary w-full !py-4"
+            >
+              {isSavingConfig ? 'Đang lưu...' : 'Lưu cấu hình'}
+            </button>
+            {automationConfig && (
+              <p className="text-xs font-bold text-on-surface-variant">
+                Hiện tại: {automationConfig.max_auto_on_minutes} phút / {automationConfig.command_cooldown_seconds} giây
+              </p>
+            )}
           </div>
         </div>
 

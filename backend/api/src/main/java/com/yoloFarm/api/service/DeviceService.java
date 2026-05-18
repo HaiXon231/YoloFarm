@@ -7,6 +7,7 @@ import com.yoloFarm.api.entity.DeviceModel;
 import com.yoloFarm.api.entity.Farm;
 import com.yoloFarm.api.enums.ConnectionStatusEnum;
 import com.yoloFarm.api.enums.DeviceStatusEnum;
+import com.yoloFarm.api.enums.DeviceTypeEnum;
 import com.yoloFarm.api.enums.OperatingModeEnum;
 import com.yoloFarm.api.exception.ConflictException;
 import com.yoloFarm.api.repository.DeviceModelRepository;
@@ -46,6 +47,7 @@ public class DeviceService {
     @Lazy
     private final MqttReceiverService mqttReceiverService;
     private final AutomationRuntimeStateService automationRuntimeStateService;
+    private final DeviceRealtimeService deviceRealtimeService;
 
     @Transactional(readOnly = true)
     public List<DeviceResponse> getDevicesByFarmId(UUID farmId, UUID ownerId) {
@@ -84,7 +86,11 @@ public class DeviceService {
                 .status(DeviceStatusEnum.PENDING)
                 .connectionStatus(ConnectionStatusEnum.OFFLINE)
                 .operatingMode(OperatingModeEnum.MANUAL)
+                .minValue(resolveRequestedOrModelMin(request.getMinValue(), model))
+                .maxValue(resolveRequestedOrModelMax(request.getMaxValue(), model))
                 .build();
+
+        validateDeviceThresholdAgainstModel(device, device.getMinValue(), device.getMaxValue());
 
         device = deviceRepository.save(device);
         return mapToResponse(device);
@@ -148,7 +154,9 @@ public class DeviceService {
         }
 
         device.setStatus(DeviceStatusEnum.PENDING_REMOVAL);
-        return mapToResponse(deviceRepository.save(device));
+        Device saved = deviceRepository.save(device);
+        deviceRealtimeService.publishDeviceState(saved);
+        return mapToResponse(saved);
     }
 
     @Transactional
@@ -169,7 +177,9 @@ public class DeviceService {
         }
 
         device.setOperatingMode(mode);
-        return mapToResponse(deviceRepository.save(device));
+        Device saved = deviceRepository.save(device);
+        deviceRealtimeService.publishDeviceState(saved);
+        return mapToResponse(saved);
     }
 
     @Transactional
@@ -181,6 +191,7 @@ public class DeviceService {
             throw new ConflictException("Chỉ có thể cấu hình ngưỡng khi thiết bị đang ở trạng thái ACTIVE");
         }
 
+        validateDeviceThresholdAgainstModel(device, minValue, maxValue);
         device.setMinValue(minValue);
         device.setMaxValue(maxValue);
         return mapToResponse(deviceRepository.save(device));
@@ -232,6 +243,7 @@ public class DeviceService {
         device.setAdafruitFeedKey(resolvedFeedKey);
         device.setStatus(DeviceStatusEnum.ACTIVE);
         Device saved = deviceRepository.save(device);
+        deviceRealtimeService.publishDeviceState(saved);
 
         // BUG-08: evictFeedKeyCacheSafe() là no-op khi feed key mới approve — chưa có
         // entry nào trong cache.
@@ -259,6 +271,7 @@ public class DeviceService {
         if (device.getStatus() == DeviceStatusEnum.PENDING_REMOVAL) {
             device.setStatus(DeviceStatusEnum.ACTIVE);
             Device saved = deviceRepository.save(device);
+            deviceRealtimeService.publishDeviceState(saved);
 
             UUID ownerId = saved.getFarm().getOwner().getId();
             notificationService.createSystemNotification(ownerId,
@@ -270,6 +283,7 @@ public class DeviceService {
 
         device.setStatus(DeviceStatusEnum.REJECTED);
         Device saved = deviceRepository.save(device);
+        deviceRealtimeService.publishDeviceState(saved);
 
         UUID ownerId = saved.getFarm().getOwner().getId();
         notificationService.createSystemNotification(ownerId,
@@ -309,18 +323,21 @@ public class DeviceService {
 
     private List<String> deleteDeviceAndCleanup(Device device, boolean deleteAdafruitFeed) {
         String feedKey = device.getAdafruitFeedKey();
+        UUID farmId = device.getFarm().getId();
+        UUID deviceId = device.getId();
         List<String> removedRuleNames = new java.util.ArrayList<>(
-                new LinkedHashSet<>(ruleRepository.findRuleNamesBoundToDevice(device.getId())));
+                new LinkedHashSet<>(ruleRepository.findRuleNamesBoundToDevice(deviceId)));
 
         if (deleteAdafruitFeed && feedKey != null && !feedKey.isBlank()) {
             adafruitApiService.deleteFeed(feedKey);
         }
 
-        ruleRepository.deleteRulesBoundToDevice(device.getId());
+        ruleRepository.deleteRulesBoundToDevice(deviceId);
         deviceRepository.delete(device);
 
         // BUG-05: Cleanup in-memory automation state để tránh accumulated stale entries
-        automationRuntimeStateService.evictDeviceState(device.getId());
+        automationRuntimeStateService.evictDeviceState(deviceId);
+        deviceRealtimeService.publishDeviceRemoved(farmId, deviceId);
 
         // Xóa cache feed key để tránh stale mapping sau khi thiết bị đã bị xóa khỏi DB.
         evictFeedKeyCacheSafe(feedKey);
@@ -417,5 +434,33 @@ public class DeviceService {
         response.setMinValue(device.getMinValue());
         response.setMaxValue(device.getMaxValue());
         return response;
+    }
+
+    private Float resolveRequestedOrModelMin(Float requestedMin, DeviceModel model) {
+        return requestedMin != null ? requestedMin : model.getMinValue();
+    }
+
+    private Float resolveRequestedOrModelMax(Float requestedMax, DeviceModel model) {
+        return requestedMax != null ? requestedMax : model.getMaxValue();
+    }
+
+    private void validateDeviceThresholdAgainstModel(Device device, Float minValue, Float maxValue) {
+        if (minValue != null && maxValue != null && minValue >= maxValue) {
+            throw new IllegalArgumentException("Giá trị cảnh báo min phải nhỏ hơn max");
+        }
+
+        DeviceModel model = device.getModel();
+        if (model == null || model.getDeviceType() != DeviceTypeEnum.SENSOR) {
+            return;
+        }
+
+        Float modelMin = model.getMinValue();
+        Float modelMax = model.getMaxValue();
+        if (modelMin != null && minValue != null && minValue < modelMin) {
+            throw new IllegalArgumentException("Ngưỡng min không được thấp hơn dải khuyến nghị của model");
+        }
+        if (modelMax != null && maxValue != null && maxValue > modelMax) {
+            throw new IllegalArgumentException("Ngưỡng max không được cao hơn dải khuyến nghị của model");
+        }
     }
 }

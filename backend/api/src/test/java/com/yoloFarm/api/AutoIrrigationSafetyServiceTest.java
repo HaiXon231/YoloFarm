@@ -10,6 +10,7 @@ import com.yoloFarm.api.enums.MetricTypeEnum;
 import com.yoloFarm.api.enums.OperatingModeEnum;
 import com.yoloFarm.api.enums.RoleEnum;
 import com.yoloFarm.api.repository.DeviceRepository;
+import com.yoloFarm.api.service.AutomationConfigService;
 import com.yoloFarm.api.service.NotificationService;
 import com.yoloFarm.api.service.automation.AutoIrrigationSafetyService;
 import com.yoloFarm.api.service.automation.AutomationRuntimeStateService;
@@ -51,6 +52,9 @@ class AutoIrrigationSafetyServiceTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private AutomationConfigService automationConfigService;
+
     private AutomationRuntimeStateService automationRuntimeStateService;
     private AutoIrrigationSafetyService autoIrrigationSafetyService;
 
@@ -65,9 +69,9 @@ class AutoIrrigationSafetyServiceTest {
                 autoThresholdStrategy,
                 notificationService,
                 automationRuntimeStateService,
+                automationConfigService,
                 fixedClock);
-
-        ReflectionTestUtils.setField(autoIrrigationSafetyService, "maxAutoOnMinutes", 20L);
+        when(automationConfigService.getMaxAutoOnMinutes()).thenReturn(20);
     }
 
     @Test

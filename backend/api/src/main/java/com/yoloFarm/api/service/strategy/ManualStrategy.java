@@ -3,6 +3,7 @@ package com.yoloFarm.api.service.strategy;
 import com.yoloFarm.api.entity.Device;
 import com.yoloFarm.api.enums.OperatingModeEnum;
 import com.yoloFarm.api.repository.DeviceRepository;
+import com.yoloFarm.api.service.DeviceRealtimeService;
 import com.yoloFarm.api.service.mqtt.MqttSenderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ public class ManualStrategy implements IrrigationStrategy {
 
     private final DeviceRepository deviceRepository;
     private final MqttSenderService mqttSenderService;
+    private final DeviceRealtimeService deviceRealtimeService;
 
     @Override
     public boolean executeControl(UUID farmId, UUID deviceId, String command) {
@@ -42,7 +44,8 @@ public class ManualStrategy implements IrrigationStrategy {
         mqttSenderService.sendCommand(adafruitFeedKey, command);
 
         device.setIsActive("ON".equalsIgnoreCase(command));
-        deviceRepository.save(device);
+        Device saved = deviceRepository.save(device);
+        deviceRealtimeService.publishDeviceState(saved);
 
         log.info("Sent command {} successfully in MANUAL mode to device {}", command, deviceId);
         return true;

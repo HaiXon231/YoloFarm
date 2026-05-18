@@ -15,10 +15,13 @@ export default function ModelFormModal({ isOpen, onClose, onSuccess }: ModelForm
   const [deviceType, setDeviceType] = useState<DeviceType>('SENSOR')
   const [metricType, setMetricType] = useState<MetricType>('TEMP')
   const [manufacturer, setManufacturer] = useState('')
+  const [displayUnit, setDisplayUnit] = useState('')
+  const [minValue, setMinValue] = useState('')
+  const [maxValue, setMaxValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  const sensorMetrics: MetricType[] = ['TEMP', 'HUMIDITY', 'SOIL_MOISTURE']
-  const actuatorMetrics: MetricType[] = ['PUMP', 'LIGHT']
+  const sensorMetrics: MetricType[] = ['TEMP', 'HUMIDITY', 'SOIL_MOISTURE', 'LIGHT', 'PRESSURE', 'CO2']
+  const actuatorMetrics: MetricType[] = ['PUMP', 'VALVE', 'RELAY', 'FAN']
 
   const metricOptions = deviceType === 'SENSOR' ? sensorMetrics : actuatorMetrics
 
@@ -31,12 +34,18 @@ export default function ModelFormModal({ isOpen, onClose, onSuccess }: ModelForm
         device_type: deviceType,
         metric_type: metricType,
         manufacturer: manufacturer || undefined,
+        display_unit: displayUnit || undefined,
+        min_value: minValue === '' ? null : Number(minValue),
+        max_value: maxValue === '' ? null : Number(maxValue),
       })
       toast.success('Thêm khuôn mẫu thiết bị thành công!')
       setModelName('')
       setDeviceType('SENSOR')
       setMetricType('TEMP')
       setManufacturer('')
+      setDisplayUnit('')
+      setMinValue('')
+      setMaxValue('')
       onSuccess()
     } catch (error) {
       toast.error(getApiErrorMessage(error))
@@ -108,6 +117,39 @@ export default function ModelFormModal({ isOpen, onClose, onSuccess }: ModelForm
             className="input-field"
             placeholder="VD: AgriTech VN"
           />
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="label-text block mb-2">Đơn vị</label>
+            <input
+              type="text"
+              value={displayUnit}
+              onChange={(e) => setDisplayUnit(e.target.value)}
+              className="input-field"
+              placeholder="%, C, lux"
+            />
+          </div>
+          <div>
+            <label className="label-text block mb-2">Min khuyến nghị</label>
+            <input
+              type="number"
+              step="any"
+              value={minValue}
+              onChange={(e) => setMinValue(e.target.value)}
+              className="input-field"
+            />
+          </div>
+          <div>
+            <label className="label-text block mb-2">Max khuyến nghị</label>
+            <input
+              type="number"
+              step="any"
+              value={maxValue}
+              onChange={(e) => setMaxValue(e.target.value)}
+              className="input-field"
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-3 justify-end pt-2">

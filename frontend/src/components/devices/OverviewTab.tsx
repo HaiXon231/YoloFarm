@@ -10,9 +10,10 @@ interface OverviewTabProps {
   devices: DeviceWithModel[]
   deviceModels: DeviceModelResponse[]
   onDevicesChange: () => void
+  onDeviceEvents: (events: DeviceStatusEvent[]) => void
 }
 
-export default function OverviewTab({ farmId, devices, deviceModels, onDevicesChange }: OverviewTabProps) {
+export default function OverviewTab({ farmId, devices, deviceModels, onDevicesChange, onDeviceEvents }: OverviewTabProps) {
   const [isAddDeviceOpen, setIsAddDeviceOpen] = useState(false)
   const [realtimeValues, setRealtimeValues] = useState<Record<string, { value: number; timestamp: string }>>({})
   const [activeInSession, setActiveInSession] = useState<Set<string>>(new Set())
@@ -36,15 +37,16 @@ export default function OverviewTab({ farmId, devices, deviceModels, onDevicesCh
     setActiveInSession((prev) => new Set(prev).add(data.deviceId))
     setFlashDeviceId(data.deviceId)
     setTimeout(() => setFlashDeviceId(null), 600)
-  }, [])
+  }, [onDeviceEvents])
 
   // Nhận push event từ backend khi thiết bị ONLINE/OFFLINE — cập nhật state ngay, không cần refetch
   const handleDeviceStatus = useCallback((events: DeviceStatusEvent[]) => {
+    onDeviceEvents(events)
     events.forEach((ev) => {
       setActiveInSession((prev) => {
         const next = new Set(prev)
         if (ev.connectionStatus === 'ONLINE') next.add(ev.deviceId)
-        else next.delete(ev.deviceId)
+        else if (ev.connectionStatus === 'OFFLINE') next.delete(ev.deviceId)
         return next
       })
     })

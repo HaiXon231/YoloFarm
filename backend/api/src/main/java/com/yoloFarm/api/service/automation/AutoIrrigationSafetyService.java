@@ -2,12 +2,12 @@ package com.yoloFarm.api.service.automation;
 
 import com.yoloFarm.api.entity.Device;
 import com.yoloFarm.api.repository.DeviceRepository;
+import com.yoloFarm.api.service.AutomationConfigService;
 import com.yoloFarm.api.service.NotificationService;
 import com.yoloFarm.api.service.strategy.AutoThresholdStrategy;
 import com.yoloFarm.api.service.strategy.IrrigationContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -26,13 +26,12 @@ public class AutoIrrigationSafetyService {
     private final AutoThresholdStrategy autoThresholdStrategy;
     private final NotificationService notificationService;
     private final AutomationRuntimeStateService automationRuntimeStateService;
+    private final AutomationConfigService automationConfigService;
     private final Clock clock;
-
-    @Value("${app.automation.max-auto-on-minutes:20}")
-    private long maxAutoOnMinutes;
 
     @Scheduled(fixedDelayString = "${app.automation.auto-off-watchdog-interval-ms:30000}")
     public void enforceAutoOffSafety() {
+        long maxAutoOnMinutes = automationConfigService.getMaxAutoOnMinutes();
         if (maxAutoOnMinutes <= 0) {
             return;
         }

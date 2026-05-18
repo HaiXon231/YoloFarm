@@ -3,6 +3,9 @@ package com.yoloFarm.api.service.mqtt;
 import com.yoloFarm.api.dto.SensorData;
 import com.yoloFarm.api.entity.Device;
 import com.yoloFarm.api.repository.DeviceRepository;
+import com.yoloFarm.api.service.DeviceRealtimeService;
+import com.yoloFarm.api.service.NotificationService;
+import com.yoloFarm.api.service.automation.AutomationRuntimeStateService;
 import com.yoloFarm.api.service.mqtt.observer.Observer;
 import com.yoloFarm.api.service.mqtt.observer.Subject;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +15,6 @@ import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -37,7 +39,9 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
 
     private final IMqttClient mqttClient;
     private final DeviceRepository deviceRepository;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationService notificationService;
+    private final AutomationRuntimeStateService automationRuntimeStateService;
+    private final DeviceRealtimeService deviceRealtimeService;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
     private final AtomicBoolean subscribed = new AtomicBoolean(false);
 
@@ -196,7 +200,7 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
 
             if (deviceOpt.isPresent()) {
                 Device device = deviceOpt.get();
-                Float metricValue = Float.parseFloat(payload);
+                Float metricValue = parseMetricPayload(payload);
 
                 // Phát hiện chuyển trạng thái OFFLINE → ONLINE để push WS (chỉ khi thực sự thay
                 // đổi)
@@ -212,15 +216,7 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
 
                 // Push WebSocket event khi thiết bị vừa quay lại ONLINE
                 if (wasOffline) {
-                    java.util.List<java.util.Map<String, Object>> onlinePayload = java.util.List
-                            .of(java.util.Map.<String, Object>of(
-                                    "deviceId", device.getId().toString(),
-                                    "connectionStatus", "ONLINE"));
-                    messagingTemplate.convertAndSend(
-                            "/topic/farm/" + device.getFarm().getId() + "/device-status",
-                            (Object) onlinePayload);
-                    messagingTemplate.convertAndSend("/topic/admin/stats-changed",
-                            (Object) java.util.Map.of("reason", "device_online"));
+                    deviceRealtimeService.publishDeviceState(device);
                     log.info("MqttReceiver: Device [{}] came back ONLINE.", device.getId());
                 }
 
@@ -233,10 +229,12 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
                 if (minVal != null && metricValue < minVal) {
                     log.warn("MqttReceiver: Value {:.2f} from device {} is below minimum threshold {:.2f} (metric={})",
                             metricValue, device.getId(), minVal, metricType);
+                    notifyThresholdBreach(device, metricValue, minVal, "MIN", metricType);
                 }
                 if (maxVal != null && metricValue > maxVal) {
                     log.warn("MqttReceiver: Value {:.2f} from device {} exceeds maximum threshold {:.2f} (metric={})",
                             metricValue, device.getId(), maxVal, metricType);
+                    notifyThresholdBreach(device, metricValue, maxVal, "MAX", metricType);
                 }
 
                 SensorData sensorData = new SensorData(
@@ -256,6 +254,42 @@ public class MqttReceiverService implements Subject, MqttCallbackExtended {
         } catch (Exception e) {
             log.error("MqttReceiver: Error processing Adafruit message", e);
         }
+    }
+
+    private void notifyThresholdBreach(Device device, Float value, Float boundary, String boundaryName, String metricType) {
+        if (device == null || device.getFarm() == null || device.getFarm().getOwner() == null) {
+            return;
+        }
+
+        if (!automationRuntimeStateService.shouldNotifyThresholdBreach(
+                device.getId(), boundaryName, 300, Instant.now())) {
+            return;
+        }
+
+        String direction = "MIN".equals(boundaryName) ? "dưới ngưỡng tối thiểu" : "vượt ngưỡng tối đa";
+        String message = String.format(
+                "Cảnh báo [%s]: giá trị %s của thiết bị [%s] là %.2f, %s %.2f.",
+                metricType,
+                direction,
+                device.getName(),
+                value,
+                "MIN".equals(boundaryName) ? "thấp hơn" : "cao hơn",
+                boundary);
+        notificationService.createSystemNotification(device.getFarm().getOwner().getId(), message);
+    }
+
+    private Float parseMetricPayload(String payload) {
+        if (payload == null) {
+            throw new NumberFormatException("empty payload");
+        }
+        String normalized = payload.trim();
+        if ("ON".equalsIgnoreCase(normalized)) {
+            return 1.0f;
+        }
+        if ("OFF".equalsIgnoreCase(normalized)) {
+            return 0.0f;
+        }
+        return Float.parseFloat(normalized);
     }
 
     private Optional<Device> findDeviceByFeedAlias(String rawFeedKey) {

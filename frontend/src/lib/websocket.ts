@@ -6,7 +6,10 @@ type TelemetryCallback = (data: TelemetryMessage) => void
 
 export type DeviceStatusEvent = {
   deviceId: string
-  connectionStatus: 'ONLINE' | 'OFFLINE'
+  connectionStatus?: 'ONLINE' | 'OFFLINE' | ''
+  operatingMode?: 'AUTO' | 'MANUAL' | ''
+  status?: 'PENDING' | 'ACTIVE' | 'REJECTED' | 'PENDING_REMOVAL' | 'REMOVED' | ''
+  isActive?: boolean
 }
 
 type DeviceStatusCallback = (events: DeviceStatusEvent[]) => void

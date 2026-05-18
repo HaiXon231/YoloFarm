@@ -45,16 +45,17 @@ public interface DeviceRepository extends JpaRepository<Device, UUID> {
          * Lấy Device kèm Model + Farm (JOIN FETCH) để tránh LazyInitializationException
          * Dùng cho MQTT callback (ngoài Transactional context)
          */
-        @Query("SELECT d FROM Device d JOIN FETCH d.model JOIN FETCH d.farm WHERE d.adafruitFeedKey = :feedKey")
+        @Query("SELECT d FROM Device d JOIN FETCH d.model JOIN FETCH d.farm f JOIN FETCH f.owner WHERE d.adafruitFeedKey = :feedKey")
         java.util.Optional<Device> findByAdafruitFeedKeyWithModelAndFarm(@Param("feedKey") String feedKey);
 
-        @Query("SELECT d FROM Device d JOIN FETCH d.model JOIN FETCH d.farm WHERE LOWER(d.adafruitFeedKey) = LOWER(:feedKey)")
+        @Query("SELECT d FROM Device d JOIN FETCH d.model JOIN FETCH d.farm f JOIN FETCH f.owner WHERE LOWER(d.adafruitFeedKey) = LOWER(:feedKey)")
         java.util.Optional<Device> findByAdafruitFeedKeyIgnoreCaseWithModelAndFarm(@Param("feedKey") String feedKey);
 
         @Query("""
                         SELECT d.id AS id,
                            d.name AS name,
                            m.modelName AS modelName,
+                           m.deviceType AS deviceType,
                            d.status AS status,
                            f.name AS farmName,
                            o.username AS ownerName,

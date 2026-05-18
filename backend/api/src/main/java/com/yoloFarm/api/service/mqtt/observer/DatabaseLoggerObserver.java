@@ -17,10 +17,9 @@ public class DatabaseLoggerObserver implements Observer {
     @Override
     public void update(SensorData data) {
         try {
-            // BUG-10: Dùng timestamp từ SensorData (thời điểm thực nhận MQTT message)
-            // thay vì LocalDateTime.now() với hardcoded timezone. Nhất quán và portable.
+            // Dùng timestamp từ SensorData và chuan hoa theo mui gio Viet Nam (UTC+7).
             java.time.LocalDateTime receivedAt = java.time.LocalDateTime
-                    .ofInstant(data.timestamp(), java.time.ZoneOffset.UTC);
+                    .ofInstant(data.timestamp(), java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
 
             TelemetryData telemetry = TelemetryData.builder()
                     .deviceId(data.deviceId())

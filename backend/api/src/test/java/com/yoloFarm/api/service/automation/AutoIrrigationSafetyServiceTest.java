@@ -4,6 +4,7 @@ import com.yoloFarm.api.entity.Device;
 import com.yoloFarm.api.entity.Farm;
 import com.yoloFarm.api.entity.User;
 import com.yoloFarm.api.repository.DeviceRepository;
+import com.yoloFarm.api.service.AutomationConfigService;
 import com.yoloFarm.api.service.NotificationService;
 import com.yoloFarm.api.service.strategy.AutoThresholdStrategy;
 import com.yoloFarm.api.service.strategy.IrrigationContext;
@@ -39,6 +40,8 @@ class AutoIrrigationSafetyServiceTest {
     private NotificationService notificationService;
     @Mock
     private AutomationRuntimeStateService automationRuntimeStateService;
+    @Mock
+    private AutomationConfigService automationConfigService;
 
     @InjectMocks
     private AutoIrrigationSafetyService safetyService;
@@ -51,7 +54,7 @@ class AutoIrrigationSafetyServiceTest {
         now = Instant.parse("2026-04-27T10:00:00Z");
         fixedClock = Clock.fixed(now, ZoneId.of("UTC"));
         ReflectionTestUtils.setField(safetyService, "clock", fixedClock);
-        ReflectionTestUtils.setField(safetyService, "maxAutoOnMinutes", 20L);
+        when(automationConfigService.getMaxAutoOnMinutes()).thenReturn(20);
     }
 
     @Test
