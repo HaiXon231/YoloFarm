@@ -46,10 +46,10 @@ export default function Modal({
       
       {/* Modal Content */}
       <div
-        className={`relative bg-surface-container-lowest rounded-3xl shadow-modal w-full ${maxWidth} animate-scale-in`}
+        className={`relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden bg-surface-container-lowest rounded-3xl shadow-modal ${maxWidth} animate-scale-in`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-8 pt-8 pb-4">
+        <div className="flex shrink-0 items-center justify-between px-8 pt-8 pb-4">
           <h2 className="font-headline text-xl font-bold text-on-surface">{title}</h2>
           <button
             onClick={onClose}
@@ -61,7 +61,7 @@ export default function Modal({
         </div>
         
         {/* Body */}
-        <div className="px-8 pb-8">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-8 pb-8">{children}</div>
       </div>
     </div>
   )
