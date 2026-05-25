@@ -141,13 +141,14 @@ public class RuleService {
                 .orElseThrow(() -> new EntityNotFoundException("Rule not found with id: " + ruleId));
 
         Device actionDevice = rule.getActionDevice();
-        boolean deletedRuleWasActive = Boolean.TRUE.equals(rule.getIsActive());
-        UUID deletedRuleId = rule.getId();
+        List<Rule> rulesToDelete = findRulesToDeleteWithPair(rule);
+        boolean deletedRuleWasActive = rulesToDelete.stream().anyMatch(r -> Boolean.TRUE.equals(r.getIsActive()));
 
-        ruleRepository.delete(rule);
-
-        // BUG-05: Cleanup cooldown state để tránh stale entries sau khi rule bị xóa
-        automationRuntimeStateService.evictRuleState(deletedRuleId);
+        for (Rule ruleToDelete : rulesToDelete) {
+            ruleRepository.delete(ruleToDelete);
+            // BUG-05: Cleanup cooldown state để tránh stale entries sau khi rule bị xóa
+            automationRuntimeStateService.evictRuleState(ruleToDelete.getId());
+        }
 
         if (actionDevice == null || actionDevice.getId() == null || !deletedRuleWasActive) {
             return;
@@ -166,6 +167,21 @@ public class RuleService {
         deviceRepository.save(actionDevice);
         log.info("RuleService: Action device {} switched to MANUAL because the last active rule was deleted.",
                 actionDevice.getId());
+    }
+
+    private List<Rule> findRulesToDeleteWithPair(Rule rule) {
+        if (rule.getFarm() == null
+                || rule.getFarm().getId() == null
+                || rule.getActionDevice() == null
+                || rule.getActionDevice().getId() == null
+                || rule.getRuleType() == null
+                || rule.getActionCommand() == null) {
+            return List.of(rule);
+        }
+
+        return findComplementaryRule(rule)
+                .map(complementaryRule -> List.of(rule, complementaryRule))
+                .orElseGet(() -> List.of(rule));
     }
 
     @Transactional

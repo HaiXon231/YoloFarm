@@ -24,7 +24,7 @@ public interface FarmRepository extends JpaRepository<Farm, UUID> {
                    o.username AS ownerName,
                    o.email AS ownerEmail,
                    f.createdAt AS createdAt,
-                   COUNT(d.id) AS deviceCount
+                   COUNT(CASE WHEN d.status = com.yoloFarm.api.enums.DeviceStatusEnum.ACTIVE THEN 1 END) AS deviceCount
             FROM Farm f
             JOIN f.owner o
             LEFT JOIN f.devices d

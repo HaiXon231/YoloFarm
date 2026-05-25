@@ -1,6 +1,6 @@
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
-import type { TelemetryMessage } from '@/types'
+import type { NotificationResponse, TelemetryMessage } from '@/types'
 
 type TelemetryCallback = (data: TelemetryMessage) => void
 
@@ -15,6 +15,7 @@ export type DeviceStatusEvent = {
 type DeviceStatusCallback = (events: DeviceStatusEvent[]) => void
 type AdminStatsChangedCallback = () => void
 type NotificationUnreadCallback = (unreadCount: number) => void
+type NotificationCreatedCallback = (notification: NotificationResponse) => void
 
 type RawTelemetryMessage = Partial<TelemetryMessage> & {
   device_id?: string
@@ -155,7 +156,10 @@ export function disconnectAdminStats(): void {
 }
 
 /** Kết nối WebSocket để nhận unread notification count theo user, thay cho polling 30s. */
-export function connectNotificationUnread(onUnreadChanged: NotificationUnreadCallback): void {
+export function connectNotificationUnread(
+  onUnreadChanged: NotificationUnreadCallback,
+  onNotificationCreated?: NotificationCreatedCallback
+): void {
   if (notificationStompClient?.active) {
     notificationStompClient.deactivate()
   }
@@ -181,6 +185,19 @@ export function connectNotificationUnread(onUnreadChanged: NotificationUnreadCal
           console.error('[WebSocket] Failed to parse notifications-unread:', err)
         }
       })
+
+      if (onNotificationCreated) {
+        notificationStompClient?.subscribe('/user/queue/notifications', (message) => {
+          try {
+            const notification = JSON.parse(message.body) as NotificationResponse
+            if (notification?.id) {
+              onNotificationCreated(notification)
+            }
+          } catch (err) {
+            console.error('[WebSocket] Failed to parse notification payload:', err)
+          }
+        })
+      }
     },
     onStompError: (frame) => {
       console.warn('[WebSocket] Notification STOMP error:', frame.headers.message)

@@ -70,8 +70,38 @@ public class NotificationService {
 				.isRead(false)
 				.createdAt(LocalDateTime.now())
 				.build();
-		notificationRepository.save(notification);
-		publishUnreadCountAfterCommit(user.getId(), user.getUsername());
+		Notification saved = notificationRepository.save(notification);
+		publishCreatedNotificationAfterCommit(saved.getId(), user.getId(), user.getUsername());
+	}
+
+	private void publishCreatedNotificationAfterCommit(UUID notificationId, UUID userId, String username) {
+		Runnable publisher = () -> {
+			notificationRepository.findById(notificationId)
+					.map(this::mapToResponse)
+					.ifPresent(notification -> messagingTemplate.convertAndSendToUser(
+							username,
+							"/queue/notifications",
+							notification));
+
+			long unreadCount = notificationRepository.countUnreadByUserId(userId);
+			messagingTemplate.convertAndSendToUser(
+					username,
+					"/queue/notifications-unread",
+					java.util.Map.of("unread_count", unreadCount));
+		};
+
+		if (TransactionSynchronizationManager.isActualTransactionActive()
+				&& TransactionSynchronizationManager.isSynchronizationActive()) {
+			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+				@Override
+				public void afterCommit() {
+					publisher.run();
+				}
+			});
+			return;
+		}
+
+		publisher.run();
 	}
 
 	private void publishUnreadCountAfterCommit(UUID userId, String username) {

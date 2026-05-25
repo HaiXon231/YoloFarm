@@ -20,6 +20,7 @@ interface NotificationState {
   fetchNotifications: () => Promise<void>
   fetchUnreadCount: () => Promise<void>
   setUnreadCount: (count: number) => void
+  addNotification: (notification: NotificationResponse) => void
   loadMoreNotifications: () => Promise<void>
   markAsRead: (id: string) => Promise<void>
   markAllAsRead: () => Promise<void>
@@ -49,6 +50,21 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   setUnreadCount: (count: number) => {
     set({ unreadCount: Math.max(0, count) })
+  },
+
+  addNotification: (notification: NotificationResponse) => {
+    set((state) => {
+      const exists = state.notifications.some((item) => item.id === notification.id)
+      if (exists) {
+        return state
+      }
+
+      return {
+        notifications: [notification, ...state.notifications].slice(0, state.pageSize),
+        unreadCount: notification.is_read ? state.unreadCount : state.unreadCount + 1,
+        hasMore: state.hasMore || state.notifications.length >= state.pageSize,
+      }
+    })
   },
 
   fetchNotifications: async () => {

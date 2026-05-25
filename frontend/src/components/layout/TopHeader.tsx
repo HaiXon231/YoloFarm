@@ -18,6 +18,7 @@ export default function TopHeader() {
     fetchNotifications,
     fetchUnreadCount,
     setUnreadCount,
+    addNotification,
     loadMoreNotifications,
     markAsRead,
     markAllAsRead,
@@ -41,11 +42,16 @@ export default function TopHeader() {
   // Keep bell badge in sync via WebSocket push instead of polling every 30s.
   useEffect(() => {
     fetchUnreadCount()
-    connectNotificationUnread((count) => {
-      setUnreadCount(count)
-    })
+    connectNotificationUnread(
+      (count) => {
+        setUnreadCount(count)
+      },
+      (notification) => {
+        addNotification(notification)
+      }
+    )
     return () => disconnectNotificationUnread()
-  }, [fetchUnreadCount, setUnreadCount])
+  }, [addNotification, fetchUnreadCount, setUnreadCount])
 
   // Close panel on click outside
   useEffect(() => {
