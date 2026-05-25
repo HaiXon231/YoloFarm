@@ -194,7 +194,9 @@ public class DeviceService {
         validateDeviceThresholdAgainstModel(device, minValue, maxValue);
         device.setMinValue(minValue);
         device.setMaxValue(maxValue);
-        return mapToResponse(deviceRepository.save(device));
+        Device saved = deviceRepository.save(device);
+        deviceRealtimeService.publishDeviceState(saved);
+        return mapToResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -445,12 +447,22 @@ public class DeviceService {
     }
 
     private void validateDeviceThresholdAgainstModel(Device device, Float minValue, Float maxValue) {
+        if ((minValue != null && !Float.isFinite(minValue)) || (maxValue != null && !Float.isFinite(maxValue))) {
+            throw new IllegalArgumentException("Giá trị ngưỡng phải là số hợp lệ");
+        }
+
         if (minValue != null && maxValue != null && minValue >= maxValue) {
             throw new IllegalArgumentException("Giá trị cảnh báo min phải nhỏ hơn max");
         }
 
         DeviceModel model = device.getModel();
-        if (model == null || model.getDeviceType() != DeviceTypeEnum.SENSOR) {
+        if (model == null) {
+            return;
+        }
+        if (model.getDeviceType() != DeviceTypeEnum.SENSOR) {
+            if (minValue != null || maxValue != null) {
+                throw new IllegalArgumentException("Chỉ thiết bị cảm biến mới được cấu hình ngưỡng cảnh báo");
+            }
             return;
         }
 
@@ -458,6 +470,12 @@ public class DeviceService {
         Float modelMax = model.getMaxValue();
         if (modelMin != null && minValue != null && minValue < modelMin) {
             throw new IllegalArgumentException("Ngưỡng min không được thấp hơn dải khuyến nghị của model");
+        }
+        if (modelMax != null && minValue != null && minValue > modelMax) {
+            throw new IllegalArgumentException("Ngưỡng min không được cao hơn dải khuyến nghị của model");
+        }
+        if (modelMin != null && maxValue != null && maxValue < modelMin) {
+            throw new IllegalArgumentException("Ngưỡng max không được thấp hơn dải khuyến nghị của model");
         }
         if (modelMax != null && maxValue != null && maxValue > modelMax) {
             throw new IllegalArgumentException("Ngưỡng max không được cao hơn dải khuyến nghị của model");

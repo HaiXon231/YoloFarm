@@ -1,5 +1,6 @@
 package com.yoloFarm.api.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -7,7 +8,9 @@ import lombok.Setter;
 @Setter
 public class DeviceThresholdRequest {
 
+    @JsonAlias("minValue")
     private Float minValue;
 
+    @JsonAlias("maxValue")
     private Float maxValue;
 }

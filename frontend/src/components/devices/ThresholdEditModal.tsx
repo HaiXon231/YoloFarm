@@ -38,8 +38,13 @@ export default function ThresholdEditModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const min = minValue === '' ? null : parseFloat(minValue)
-    const max = maxValue === '' ? null : parseFloat(maxValue)
+    const min = minValue.trim() === '' ? null : Number(minValue)
+    const max = maxValue.trim() === '' ? null : Number(maxValue)
+
+    if ((min !== null && !Number.isFinite(min)) || (max !== null && !Number.isFinite(max))) {
+      toast.error('Giá trị ngưỡng phải là số hợp lệ')
+      return
+    }
 
     if (min !== null && max !== null && min >= max) {
       toast.error('Giá trị min phải nhỏ hơn max')
@@ -49,8 +54,8 @@ export default function ThresholdEditModal({
     setIsSaving(true)
     try {
       await api.patch(`/devices/${deviceId}/threshold`, {
-        minValue: min,
-        maxValue: max,
+        min_value: min,
+        max_value: max,
       })
       toast.success('Cập nhật ngưỡng thành công!')
       onSuccess()

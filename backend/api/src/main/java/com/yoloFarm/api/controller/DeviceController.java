@@ -49,7 +49,7 @@ public class DeviceController {
     public ResponseEntity<?> updateThreshold(
             @AuthenticationPrincipal User currentUser,
             @PathVariable("deviceId") UUID deviceId,
-            @RequestBody DeviceThresholdRequest request) {
+            @Valid @RequestBody DeviceThresholdRequest request) {
         return ResponseEntity.ok(deviceService.updateThreshold(
                 currentUser.getId(), deviceId,
                 request.getMinValue(), request.getMaxValue()));
